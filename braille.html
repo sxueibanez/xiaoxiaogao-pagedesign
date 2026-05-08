@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Braille Art Studio - Text & Image</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 900px;
+            margin: 20px auto;
+            padding: 0 20px;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        /* 选项卡样式 */
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 10px;
+        }
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border-radius: 6px;
+            background: #f0f0f0;
+            font-weight: bold;
+            transition: all 0.2s;
+            border: none;
+            color: #555;
+            font-size: 16px;
+        }
+        .tab:hover { background: #e4e4e4; }
+        .tab.active {
+            background: #007bff;
+            color: white;
+        }
+
+        /* 控制面板样式 */
+        .panel {
+            display: none;
+            animation: fadeIn 0.3s;
+        }
+        .panel.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f9f9f9;
+            border: 1px solid #eee;
+            border-radius: 4px;
+            align-items: center;
+        }
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        textarea {
+            width: 100%;
+            height: 100px;
+            padding: 10px;
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            resize: vertical;
+            font-size: 16px;
+            margin-bottom: 15px;
+        }
+
+        /* 输出区样式 */
+        .output-container {
+            margin-top: 20px;
+            position: relative;
+            border: 2px dashed #ccc;
+            border-radius: 4px;
+            background: #fafafa;
+            transition: all 0.2s;
+        }
+        .output-container.dragover {
+            border-color: #007bff;
+            background: #e9f2ff;
+        }
+        pre {
+            background: #1e1e1e;
+            color: #f0f0f0; 
+            padding: 15px;
+            margin: 0;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-family: monospace; 
+            line-height: 1; 
+            font-size: 14px;
+            white-space: pre;
+            max-height: 60vh;
+            overflow-y: auto;
+            min-height: 150px;
+        }
+        button.action-btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        button.action-btn:hover { background: #0056b3; }
+        label { font-weight: bold; cursor: pointer; }
+        input[type="range"] { vertical-align: middle; width: 120px; }
+        input[type="checkbox"] { width: 18px; height: 18px; vertical-align: middle; }
+        
+        .hint {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #888;
+            pointer-events: none;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>全能盲文点阵生成器</h2>
+    
+    <!-- 模式切换选项卡 -->
+    <div class="tabs">
+        <button class="tab active" onclick="switchTab('text')">📝 文字模式</button>
+        <button class="tab" onclick="switchTab('image')">🖼️ 图片模式</button>
+    </div>
+
+    <!-- 文字模式控制面板 -->
+    <div id="textPanel" class="panel active">
+        <textarea id="inputText" placeholder="在这里输入文字 (支持中英文)...&#10;例如：&#10;HI"></textarea>
+        <div class="controls">
+            <div class="control-group">
+                <label>分辨率 (字体大小): <span id="sizeValue">16</span>px</label>
+                <input type="range" id="fontSize" min="10" max="100" value="16">
+            </div>
+            <div class="control-group" style="margin-left: auto;">
+                <label><input type="checkbox" id="autoCropText" checked> 自动裁剪空白</label>
+            </div>
+        </div>
+    </div>
+
+    <!-- 图片模式控制面板 -->
+    <div id="imagePanel" class="panel">
+        <div class="controls">
+            <div class="control-group" style="width: 100%; margin-bottom: 10px;">
+                <label>选择图片:</label>
+                <input type="file" id="imageLoader" accept="image/*">
+                <span style="color: #666; font-size: 14px;">(支持直接 Ctrl+V 粘贴，或拖拽图片)</span>
+            </div>
+            
+            <div class="control-group">
+                <label>输出宽度: <span id="widthValue">22</span></label>
+                <input type="range" id="scaleSlider" min="10" max="250" value="22">
+                <button type="button" class="action-btn" style="padding: 4px 8px; font-size: 12px; margin-left: 8px; background-color: #28a745;" onclick="setQQWidth()">适配 QQ(22列)</button>
+            </div>
+
+            <div class="control-group">
+                <label>阈值(浓度): <span id="thresholdValue">128</span></label>
+                <input type="range" id="thresholdSlider" min="0" max="255" value="128">
+            </div>
+
+            <div class="control-group">
+                <label><input type="checkbox" id="invertColors"> 反色提取</label>
+            </div>
+
+            <div class="control-group" style="margin-left: auto;">
+                <label><input type="checkbox" id="autoCropImg" checked> 自动裁剪空白</label>
+            </div>
+        </div>
+    </div>
+
+    <!-- 共有输出区 -->
+    <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 10px;">
+        <h3 style="margin: 0;">预览结果 <span id="qqWarning" style="font-size: 14px; margin-left: 10px; font-weight: normal; display: none;"></span></h3>
+        <button class="action-btn" onclick="copyResult()">📋 复制结果</button>
+    </div>
+
+    <div class="output-container" id="dropZone">
+        <div class="hint" id="mainHint">输入文字，或在此处粘贴 (Ctrl+V) / 拖拽图片</div>
+        <pre id="output"></pre>
+    </div>
+</div>
+
+<script>
+    // --- DOM 元素获取 ---
+    // 文本相关
+    const inputText = document.getElementById('inputText');
+    const fontSizeSlider = document.getElementById('fontSize');
+    const sizeValue = document.getElementById('sizeValue');
+    const autoCropText = document.getElementById('autoCropText');
+    
+    // 图片相关
+    const imageLoader = document.getElementById('imageLoader');
+    const scaleSlider = document.getElementById('scaleSlider');
+    const widthValue = document.getElementById('widthValue');
+    const thresholdSlider = document.getElementById('thresholdSlider');
+    const thresholdValue = document.getElementById('thresholdValue');
+    const invertColors = document.getElementById('invertColors');
+    const autoCropImg = document.getElementById('autoCropImg');
+    
+    // 共有区域
+    const output = document.getElementById('output');
+    const mainHint = document.getElementById('mainHint');
+    const dropZone = document.getElementById('dropZone');
+
+    // --- 新增：一键适配 QQ ---
+    function setQQWidth() {
+        scaleSlider.value = 22;
+        widthValue.textContent = 22;
+        generateFromImage();
+    }
+
+    // --- 状态与常量 ---
+    let currentMode = 'text'; // 'text' 或 'image'
+    let originalImage = null; 
+
+    const BRAILLE_MATRIX = [
+        [1, 8],
+        [2, 16],
+        [4, 32],
+        [64, 128]
+    ];
+
+    // --- 核心工具：通用的裁剪与渲染引擎 ---
+    function renderBraille(rows, shouldCrop) {
+        let brailleResult = '';
+        
+        // 动态判断背景字符（针对反色模式或黑底图片的自动优化）
+        let bgChar = '⠀'; // 默认为空白盲文字符
+        if (rows.length > 0 && rows[0].length > 0) {
+            // 统计四个角落的字符，判断背景到底是 "空白" 还是 "全满黑块(⣿)"
+            const corners = [
+                rows[0][0],
+                rows[0][rows[0].length - 1],
+                rows[rows.length - 1][0],
+                rows[rows.length - 1][rows[rows.length - 1].length - 1]
+            ];
+            const solidCount = corners.filter(c => c === '⣿').length;
+            // 如果四个角中有至少两个是全满黑块，我们就判定当前背景为全满
+            if (solidCount >= 2) {
+                bgChar = '⣿';
+            }
+        }
+
+        if (shouldCrop) {
+            let minX = Infinity;
+            let maxX = -1;
+            let minY = -1;
+            let maxY = -1;
+
+            // 寻找有效边界 (包含所有非背景字符的绝对最小包围盒)
+            for (let y = 0; y < rows.length; y++) {
+                let row = rows[y];
+                for (let x = 0; x < row.length; x++) {
+                    if (row[x] !== bgChar) {
+                        if (minY === -1) minY = y;
+                        maxY = y;
+                        if (x < minX) minX = x;
+                        if (x > maxX) maxX = x;
+                    }
+                }
+            }
+
+            if (minY !== -1) {
+                let croppedRows = [];
+                for (let y = minY; y <= maxY; y++) {
+                    // 提取包围盒范围内的字符串，完美切除左侧和右侧多余的背景！
+                    let trimmed = rows[y].substring(minX, maxX + 1);
+                    
+                    // 重点：如果背景是空白(⠀)，我们依然逐行切掉右侧多余的空白来减小复制体积
+                    // 但如果背景是黑块(⣿)，我们就不逐行切了，从而保证镂空效果是一个完美的矩形！
+                    if (bgChar === '⠀') {
+                        trimmed = trimmed.replace(/⠀+$/, '');
+                    }
+                    croppedRows.push(trimmed);
+                }
+                brailleResult = croppedRows.join('\n');
+            } else {
+                brailleResult = ""; // 空
+            }
+        } else {
+            // 如果不全局裁剪，如果是空白背景还是去掉右侧空白，黑块则不处理
+            if (bgChar === '⠀') {
+                brailleResult = rows.map(r => r.replace(/⠀+$/, '')).join('\n');
+            } else {
+                brailleResult = rows.join('\n');
+            }
+        }
+
+        output.textContent = brailleResult;
+        mainHint.style.display = brailleResult.length > 0 ? 'none' : 'block';
+
+        // --- 新增：QQ 宽度智能检测 ---
+        const qqWarning = document.getElementById('qqWarning');
+        if (brailleResult.length > 0) {
+            const lines = brailleResult.split('\n');
+            const maxLen = Math.max(...lines.map(l => l.length));
+            
+            qqWarning.style.display = 'inline';
+            if (maxLen > 22) {
+                qqWarning.style.color = '#d9534f'; // 红色警告
+                qqWarning.textContent = `⚠️ 当前最宽 ${maxLen} 列，超过 QQ 限制(22)，粘贴后会折行错乱！`;
+            } else {
+                qqWarning.style.color = '#28a745'; // 绿色成功
+                qqWarning.textContent = `✅ 当前最宽 ${maxLen} 列，完美适配 QQ！`;
+            }
+        } else {
+            qqWarning.style.display = 'none';
+        }
+    }
+
+    // --- 模式 1：文字生成逻辑 ---
+    function generateFromText() {
+        if (currentMode !== 'text') return;
+        const text = inputText.value;
+        const fontSize = parseInt(fontSizeSlider.value);
+        if (!text) {
+            renderBraille([], false);
+            return;
+        }
+
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        const lines = text.split('\n');
+        ctx.font = `bold ${fontSize}px sans-serif`;
+        
+        let maxWidth = 0;
+        lines.forEach(line => {
+            const metrics = ctx.measureText(line);
+            if (metrics.width > maxWidth) maxWidth = metrics.width;
+        });
+
+        canvas.width = Math.ceil((maxWidth + 10) / 2) * 2;
+        canvas.height = Math.ceil((lines.length * fontSize * 1.2) / 4) * 4;
+
+        ctx.fillStyle = 'white';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = 'black';
+        ctx.font = `bold ${fontSize}px sans-serif`;
+        ctx.textBaseline = 'top';
+        
+        lines.forEach((line, index) => {
+            ctx.fillText(line, 0, index * fontSize * 1.2);
+        });
+
+        const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+        let rows = [];
+
+        for (let y = 0; y < canvas.height; y += 4) {
+            let rowString = '';
+            for (let x = 0; x < canvas.width; x += 2) {
+                let brailleCharValue = 0;
+                for (let dy = 0; dy < 4; dy++) {
+                    for (let dx = 0; dx < 2; dx++) {
+                        const px = x + dx;
+                        const py = y + dy;
+                        if (px < canvas.width && py < canvas.height) {
+                            const index = (py * canvas.width + px) * 4;
+                            if (imgData[index] < 128) {
+                                brailleCharValue += BRAILLE_MATRIX[dy][dx];
+                            }
+                        }
+                    }
+                }
+                rowString += String.fromCharCode(0x2800 + brailleCharValue);
+            }
+            rows.push(rowString);
+        }
+
+        renderBraille(rows, autoCropText.checked);
+    }
+
+    // --- 模式 2：图片生成逻辑 ---
+    function generateFromImage() {
+        if (currentMode !== 'image' || !originalImage) return;
+
+        const targetCharWidth = parseInt(scaleSlider.value); 
+        const brightnessThreshold = parseInt(thresholdSlider.value); 
+        const isInverted = invertColors.checked;
+
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+
+        canvas.width = targetCharWidth * 2;
+        const aspectRatio = originalImage.height / originalImage.width;
+        canvas.height = Math.ceil((canvas.width * aspectRatio) / 4) * 4;
+
+        ctx.fillStyle = 'white'; 
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(originalImage, 0, 0, canvas.width, canvas.height);
+
+        const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+        let rows = [];
+
+        for (let y = 0; y < canvas.height; y += 4) {
+            let rowString = '';
+            for (let x = 0; x < canvas.width; x += 2) {
+                let brailleCharValue = 0;
+                for (let dy = 0; dy < 4; dy++) {
+                    for (let dx = 0; dx < 2; dx++) {
+                        const px = x + dx;
+                        const py = y + dy;
+                        if (px < canvas.width && py < canvas.height) {
+                            const idx = (py * canvas.width + px) * 4;
+                            const brightness = 0.299 * imgData[idx] + 0.587 * imgData[idx+1] + 0.114 * imgData[idx+2];
+                            
+                            let isDot = brightness < brightnessThreshold;
+                            if (isInverted) isDot = !isDot;
+
+                            if (isDot) brailleCharValue += BRAILLE_MATRIX[dy][dx];
+                        }
+                    }
+                }
+                rowString += String.fromCharCode(0x2800 + brailleCharValue);
+            }
+            rows.push(rowString);
+        }
+
+        renderBraille(rows, autoCropImg.checked);
+    }
+
+    // --- UI 交互与事件绑定 ---
+
+    // 选项卡切换逻辑
+    function switchTab(mode) {
+        currentMode = mode;
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+        
+        if (mode === 'text') {
+            document.querySelector('.tab:nth-child(1)').classList.add('active');
+            document.getElementById('textPanel').classList.add('active');
+            generateFromText(); // 切换时重新渲染文字
+        } else {
+            document.querySelector('.tab:nth-child(2)').classList.add('active');
+            document.getElementById('imagePanel').classList.add('active');
+            if (originalImage) {
+                generateFromImage(); // 切换时渲染图片
+            } else {
+                output.textContent = '';
+                mainHint.style.display = 'block';
+                mainHint.textContent = '请选择图片，或在此处粘贴 (Ctrl+V) / 拖拽图片';
+            }
+        }
+    }
+
+    // 图片加载逻辑
+    function loadImageFromFile(file) {
+        if (!file || !file.type.startsWith('image/')) return;
+        
+        // 自动切换到图片模式
+        if (currentMode !== 'image') switchTab('image');
+
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            originalImage = new Image();
+            originalImage.onload = function() {
+                generateFromImage();
+            };
+            originalImage.src = event.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+
+    // 事件：文字输入与滑块
+    inputText.addEventListener('input', generateFromText);
+    fontSizeSlider.addEventListener('input', (e) => {
+        sizeValue.textContent = e.target.value;
+        generateFromText();
+    });
+    autoCropText.addEventListener('change', generateFromText);
+
+    // 事件：图片滑块与勾选框
+    [scaleSlider, thresholdSlider, invertColors, autoCropImg].forEach(el => {
+        el.addEventListener('input', () => {
+            if (el === scaleSlider) widthValue.textContent = scaleSlider.value;
+            if (el === thresholdSlider) thresholdValue.textContent = thresholdSlider.value;
+            generateFromImage();
+        });
+    });
+
+    // 事件：全局粘贴 & 选择文件
+    imageLoader.addEventListener('change', e => loadImageFromFile(e.target.files[0]));
+    document.addEventListener('paste', e => {
+        const items = e.clipboardData.items;
+        for (let i = 0; i < items.length; i++) {
+            if (items[i].type.indexOf("image") !== -1) {
+                loadImageFromFile(items[i].getAsFile());
+                break;
+            }
+        }
+    });
+
+    // 事件：拖拽图片
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('dragover');
+    });
+    dropZone.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('dragover');
+    });
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('dragover');
+        if (e.dataTransfer.files.length > 0) {
+            loadImageFromFile(e.dataTransfer.files[0]);
+        }
+    });
+
+    // 复制功能
+    function copyResult() {
+        if (!output.textContent) return;
+        navigator.clipboard.writeText(output.textContent).then(() => {
+            alert('复制成功！');
+        });
+    }
+
+    // 页面初始化时触发一次
+    generateFromText();
+
+</script>
+</body>
+</html>
