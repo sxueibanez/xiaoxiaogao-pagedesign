@@ -490,7 +490,7 @@
                 
                 initialFilePaths = new Set(usedFilePaths);
                 const deleteMsg = filesToDelete.length > 0 ? ` 并清理了 ${filesToDelete.length} 张废弃图片。` : "。";
-                showMessage(`保存成功！\n数据已同步到服务器${deleteMsg}`);
+                showMessage(`保存成功！\n数据已同步到服务器${deleteMsg}\n\n👉 提示：请在QQ群内发送【重载数据】使新配置生效！`);
 
             } catch (err) {
                 console.error(err);
