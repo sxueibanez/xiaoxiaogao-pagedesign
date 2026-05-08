@@ -196,6 +196,17 @@
 
         window.onload = function() {
             addPhrase(); addCommand();
+            // --- 新增：自动识别 URL 中的群号 ---
+            const urlParams = new URLSearchParams(window.location.search);
+            const groupIdFromUrl = urlParams.get('group'); // 寻找 ?group= 后的内容
+        
+            if (groupIdFromUrl) {
+                document.getElementById('group-id-input').value = groupIdFromUrl;
+                // 延迟一小会儿执行拉取，确保页面元素已完全就绪
+                setTimeout(() => {
+                    fetchServerData();
+                }, 500);
+            }
         };
 
         function showMessage(msg) {
