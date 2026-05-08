@@ -19,19 +19,19 @@
 
     <div class="w-full max-w-3xl border-[4px] border-black bg-[#C7EDCC] p-8 sm:p-12 shadow-xl">
         
-        <div class="mb-12 border-[4px] border-black flex items-center justify-between p-4 bg-[#e6f4e8]">
+        <div class="mb-12 border-[4px] border-black flex flex-col sm:flex-row items-center p-4 bg-[#e6f4e8] gap-4">
             <div class="flex items-center w-full">
-                <span class="font-bold text-2xl mr-4 whitespace-nowrap">群号：</span>
+                <span class="font-bold text-2xl mr-2 whitespace-nowrap">群号：</span>
                 <input 
                     type="text" 
                     id="group-id-input" 
                     placeholder="请输入群号..." 
-                    class="w-full text-2xl font-bold outline-none placeholder-gray-400 bg-transparent"
+                    class="w-full text-2xl font-bold outline-none placeholder-gray-400 bg-transparent min-w-[50px]"
                 >
             </div>
             <button 
                 onclick="fetchServerData()" 
-                class="ml-4 border-[3px] border-black px-6 py-2 font-bold bg-[#C7EDCC] hover:bg-[#a8cca9] transition-colors whitespace-nowrap shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-y-1 active:translate-x-1"
+                class="w-full sm:w-auto shrink-0 border-[3px] border-black px-6 py-2 font-bold bg-[#C7EDCC] hover:bg-[#a8cca9] transition-colors whitespace-nowrap shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-y-1 active:translate-x-1"
             >
                 拉取现有配置
             </button>
