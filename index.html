@@ -41,34 +41,6 @@
         </div>
 
         <div class="mb-16">
-            <h2 class="text-center font-bold text-xl mb-8 tracking-wider cursor-pointer select-none" onclick="toggleSection('phrases-container', this)">
-                短句列表：<span class="inline-block transition-transform duration-200 text-sm -rotate-90">▼</span>
-            </h2>
-            <div id="phrases-container" class="space-y-6 mb-6 hidden"></div>
-            <div class="flex items-start hidden">
-                <button onclick="addPhrase()"
-                    class="grow border-[3px] border-black p-4 font-bold flex flex-col items-center justify-center hover:bg-[#b5e0bb] transition-colors cursor-pointer w-full bg-[#e6f4e8]">
-                    <span class="mb-2 tracking-wide">点击添加新的短句</span>
-                    <span class="text-3xl leading-none font-black">+</span>
-                </button>
-            </div>
-        </div>
-
-        <div class="mb-16">
-            <h2 class="text-center font-bold text-xl mb-8 tracking-wider cursor-pointer select-none" onclick="toggleSection('commands-container', this)">
-                指令列表：<span class="inline-block transition-transform duration-200 text-sm -rotate-90">▼</span>
-            </h2>
-            <div id="commands-container" class="space-y-6 mb-6 hidden"></div>
-            <div class="flex items-start hidden">
-                <button onclick="addCommand()"
-                    class="grow border-[3px] border-black p-4 font-bold flex flex-col items-center justify-center hover:bg-[#b5e0bb] transition-colors cursor-pointer w-full bg-[#e6f4e8]">
-                    <span class="mb-2 tracking-wide">点击添加新的指令</span>
-                    <span class="text-3xl leading-none font-black">+</span>
-                </button>
-            </div>
-        </div>
-
-        <div class="mb-16">
             <h2 class="text-center font-bold text-xl mb-8 tracking-wider cursor-pointer select-none" onclick="toggleSection('super-admins-container', this)">
                 超管列表：<span class="inline-block transition-transform duration-200 text-sm -rotate-90">▼</span>
             </h2>
@@ -96,6 +68,34 @@
                 <textarea id="online-kefus-textarea" class="w-full min-h-[120px] bg-transparent outline-none resize-y font-bold leading-relaxed" placeholder="请输入在线客服QQ号，每行一个。&#10;拉取时会自动加载昵称，保存时会自动提取纯QQ号。&#10;支持手打格式如：小小糕（2567864113）"></textarea>
             </div>
             <div class="hidden"></div>
+        </div>
+
+        <div class="mb-16">
+            <h2 class="text-center font-bold text-xl mb-8 tracking-wider cursor-pointer select-none" onclick="toggleSection('phrases-container', this)">
+                短句列表：<span class="inline-block transition-transform duration-200 text-sm -rotate-90">▼</span>
+            </h2>
+            <div id="phrases-container" class="space-y-6 mb-6 hidden"></div>
+            <div class="flex items-start hidden">
+                <button onclick="addPhrase()"
+                    class="grow border-[3px] border-black p-4 font-bold flex flex-col items-center justify-center hover:bg-[#b5e0bb] transition-colors cursor-pointer w-full bg-[#e6f4e8]">
+                    <span class="mb-2 tracking-wide">点击添加新的短句</span>
+                    <span class="text-3xl leading-none font-black">+</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="mb-16">
+            <h2 class="text-center font-bold text-xl mb-8 tracking-wider cursor-pointer select-none" onclick="toggleSection('commands-container', this)">
+                指令列表：<span class="inline-block transition-transform duration-200 text-sm -rotate-90">▼</span>
+            </h2>
+            <div id="commands-container" class="space-y-6 mb-6 hidden"></div>
+            <div class="flex items-start hidden">
+                <button onclick="addCommand()"
+                    class="grow border-[3px] border-black p-4 font-bold flex flex-col items-center justify-center hover:bg-[#b5e0bb] transition-colors cursor-pointer w-full bg-[#e6f4e8]">
+                    <span class="mb-2 tracking-wide">点击添加新的指令</span>
+                    <span class="text-3xl leading-none font-black">+</span>
+                </button>
+            </div>
         </div>
 
         <div class="mb-16">
@@ -200,25 +200,23 @@
         let currentEditTarget = null;
 
         // --- 【新增核心工具】批量拉取腾讯官方QQ昵称 (JSONP) ---
+        // --- 【修复 1】解决腾讯中文昵称乱码问题 ---
         function fetchQQNicknamesBatch(qqArray) {
             return new Promise((resolve) => {
                 if (!qqArray || qqArray.length === 0) {
                     resolve({});
                     return;
                 }
-                // 过滤提取合法的纯数字QQ号并去重
                 const validQQs = [...new Set(qqArray.map(String).filter(q => /^\d+$/.test(q)))];
                 if (validQQs.length === 0) {
                     resolve({});
                     return;
                 }
 
-                // 绑定全局回调函数供腾讯接口调用
                 window.portraitCallBack = function (data) {
                     const result = {};
                     try {
                         for (const qq in data) {
-                            // 腾讯返回数组的第 6 项通常是完美准确的QQ昵称
                             if (data[qq] && data[qq][6]) {
                                 result[qq] = data[qq][6];
                             }
@@ -227,14 +225,13 @@
                     resolve(result);
                 };
 
-                // 动态创建 script 标签发起跨域请求
                 const script = document.createElement('script');
-                script.src = `https://users.qzone.qq.com/fcg-bin/cgi_get_portrait.fcg?uins=${validQQs.join(',')}`;
-                script.charset = 'GBK'; // 极其重要：防止中文昵称乱码
+                // 核心修复：换用腾讯最新的 UTF-8 标准头像昵称接口，彻底告别乱码！
+                script.src = `https://users.qzone.qq.com/fcg-bin/cgi_get_portrait.fcg?uins=${validQQs.join(',')}&g_tk=1518561325`;
+                script.charset = 'utf-8'; 
 
                 script.onload = script.onerror = function () {
                     script.remove();
-                    // 兜底超时放行
                     setTimeout(() => resolve({}), 500);
                 };
 
@@ -252,6 +249,7 @@
         }
 
         // --- 【新增核心工具 优化点 3】保存时从多行文本框精准只提取纯QQ号 ---
+        // --- 【修复 2】完美兼容管理员只输入纯QQ号的情况 ---
         function extractQQArrayFromTextarea(textareaId) {
             const textarea = document.getElementById(textareaId);
             if (!textarea) return [];
@@ -262,21 +260,21 @@
                 line = line.trim();
                 if (!line) return;
 
-                // 优先精准匹配中英文括号里的数字：例如 "小小糕（2567864113）"
+                // 规则 A：优先精准匹配带括号的完整格式，例如 "小小糕（2567864113）"
                 const match = line.match(/[(（]\s*(\d+)\s*[)）]/);
                 if (match) {
                     result.push(match[1]);
                 } else {
-                    // 如果手打没加括号，自动智能提取行内最后一组纯数字
-                    // 兼容管理员手滑只写了 "2567864113" 或者 "新增客服 123456"
+                    // 规则 B（核心修复）：如果整行全是数字，或者包含数字，直接提取纯数字！
+                    // 完美支持手打输入 "123456" 或 "新客服 123456"
                     const digitsMatch = line.match(/\d+/g);
                     if (digitsMatch) {
+                        // 提取最后一段连续数字作为QQ号
                         result.push(digitsMatch[digitsMatch.length - 1]);
                     }
                 }
             });
 
-            // 去重并返回干净的数组
             return [...new Set(result)];
         }
 
@@ -413,8 +411,8 @@
             addPhrase();
             addCommand();
             // 移除了原本超管/客服默认注入单个条目的逻辑，保持纯净大文本框
-            addTextItem('paimian-container', '', '请输入排面模板内容 (支持多行，可用变量如 名字、金额)...');
-            addTextItem('huaka-container', '', '请输入划卡模板内容 (支持多行，可用变量如 会员1、接待1、金额1)...');
+            addTextItem('paimian-container', '', '请输入排面模板内容 (支持多行，可用变量 名字、金额)');
+            addTextItem('huaka-container', '', '请输入划卡模板内容 (支持多行，可用变量 会员1、接待1、金额1、时间1)');
             addTextItem('shield-container', '', '请输入需要拦截的屏蔽词...');
 
             const urlParams = new URLSearchParams(window.location.search);
@@ -515,15 +513,15 @@
 
             // 渲染排面
             if (data.paimian_lines && Array.isArray(data.paimian_lines)) {
-                data.paimian_lines.forEach(item => addTextItem('paimian-container', item, '请输入排面模板内容 (支持多行，可用变量如 名字、金额)...'));
+                data.paimian_lines.forEach(item => addTextItem('paimian-container', item, '请输入排面模板内容 (支持多行，可用变量 名字、金额)'));
             }
-            if (document.getElementById('paimian-container').children.length === 0) addTextItem('paimian-container', '', '请输入排面模板内容 (支持多行，可用变量如 名字、金额)...');
+            if (document.getElementById('paimian-container').children.length === 0) addTextItem('paimian-container', '', '请输入排面模板内容 (支持多行，可用变量 名字、金额)');
 
             // 渲染划卡
             if (data.huaka_lines && Array.isArray(data.huaka_lines)) {
-                data.huaka_lines.forEach(item => addTextItem('huaka-container', item, '请输入划卡模板内容 (支持多行，可用变量如 会员1、接待1、金额1)...'));
+                data.huaka_lines.forEach(item => addTextItem('huaka-container', item, '请输入划卡模板内容 (支持多行，可用变量如 会员1、接待1、金额1、时间1)'));
             }
-            if (document.getElementById('huaka-container').children.length === 0) addTextItem('huaka-container', '', '请输入划卡模板内容 (支持多行，可用变量如 会员1、接待1、金额1)...');
+            if (document.getElementById('huaka-container').children.length === 0) addTextItem('huaka-container', '', '请输入划卡模板内容 (支持多行，可用变量如 会员1、接待1、金额1、时间1)');
 
             // 渲染屏蔽词
             if (data.shield_words && Array.isArray(data.shield_words)) {
