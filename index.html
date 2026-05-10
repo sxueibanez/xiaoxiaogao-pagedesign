@@ -17,31 +17,17 @@
             margin-bottom: 8px;
             border: 2px solid #e5e7eb;
         }
-
-        [contenteditable] {
-            word-break: break-word;
-        }
-
-        [contenteditable] img {
-            max-width: 100%;
-            margin-top: 8px;
-            margin-bottom: 8px;
-            border: 2px solid #e5e7eb;
-        }
     </style>
 </head>
 
 <body class="min-h-screen py-12 px-4 sm:px-6 lg:px-8 font-sans text-black flex justify-center">
-    <!-- 背景视频 -->
     <video autoplay loop muted playsinline class="fixed inset-0 w-full h-full object-cover z-[-10]">
         <source src="background.mp4" type="video/mp4">
         您的浏览器不支持 HTML5 视频。
     </video>
 
-    <!-- 主内容容器 -->
     <div class="w-full max-w-3xl border-[4px] border-black bg-white/10 backdrop-blur-sm p-8 sm:p-12 shadow-xl">
 
-        <!-- 顶部区域：群号输入与配置拉取 -->
         <div class="mb-12 border-[4px] border-black flex flex-col sm:flex-row items-center p-4 bg-[#e6f4e8] gap-4">
             <div class="flex items-center w-full">
                 <span class="font-bold text-2xl mr-2 whitespace-nowrap">群号：</span>
@@ -54,7 +40,48 @@
             </button>
         </div>
 
-        <!-- 短句列表区域 -->
+        <div class="mb-16">
+            <h2 class="text-center font-bold text-xl mb-8 tracking-wider cursor-pointer select-none" onclick="toggleSection('super-admins-container', this)">
+                超管列表：<span class="inline-block transition-transform duration-200 text-sm -rotate-90">▼</span>
+            </h2>
+            <div id="super-admins-container" class="space-y-6 mb-6 hidden"></div>
+            <div class="flex items-start hidden">
+                <button onclick="addTextItem('super-admins-container', '', '请输入超管QQ号...')"
+                    class="grow border-[3px] border-black p-4 font-bold flex flex-col items-center justify-center hover:bg-[#b5e0bb] transition-colors cursor-pointer w-full bg-[#e6f4e8]">
+                    <span class="mb-2 tracking-wide">点击添加新超管</span>
+                    <span class="text-3xl leading-none font-black">+</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="mb-16">
+            <h2 class="text-center font-bold text-xl mb-8 tracking-wider cursor-pointer select-none" onclick="toggleSection('kefus-container', this)">
+                客服列表：<span class="inline-block transition-transform duration-200 text-sm -rotate-90">▼</span>
+            </h2>
+            <div id="kefus-container" class="space-y-6 mb-6 hidden"></div>
+            <div class="flex items-start hidden">
+                <button onclick="addTextItem('kefus-container', '', '请输入客服QQ号...')"
+                    class="grow border-[3px] border-black p-4 font-bold flex flex-col items-center justify-center hover:bg-[#b5e0bb] transition-colors cursor-pointer w-full bg-[#e6f4e8]">
+                    <span class="mb-2 tracking-wide">点击添加新客服</span>
+                    <span class="text-3xl leading-none font-black">+</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="mb-16">
+            <h2 class="text-center font-bold text-xl mb-8 tracking-wider cursor-pointer select-none" onclick="toggleSection('online-kefus-container', this)">
+                在线客服列表：<span class="inline-block transition-transform duration-200 text-sm -rotate-90">▼</span>
+            </h2>
+            <div id="online-kefus-container" class="space-y-6 mb-6 hidden"></div>
+            <div class="flex items-start hidden">
+                <button onclick="addTextItem('online-kefus-container', '', '请输入在线客服QQ号...')"
+                    class="grow border-[3px] border-black p-4 font-bold flex flex-col items-center justify-center hover:bg-[#b5e0bb] transition-colors cursor-pointer w-full bg-[#e6f4e8]">
+                    <span class="mb-2 tracking-wide">点击添加新在线客服</span>
+                    <span class="text-3xl leading-none font-black">+</span>
+                </button>
+            </div>
+        </div>
+        
         <div class="mb-16">
             <h2 class="text-center font-bold text-xl mb-8 tracking-wider cursor-pointer select-none" onclick="toggleSection('phrases-container', this)">
                 短句列表：<span class="inline-block transition-transform duration-200 text-sm -rotate-90">▼</span>
@@ -69,7 +96,6 @@
             </div>
         </div>
 
-        <!-- 指令列表区域 -->
         <div class="mb-16">
             <h2 class="text-center font-bold text-xl mb-8 tracking-wider cursor-pointer select-none" onclick="toggleSection('commands-container', this)">
                 指令列表：<span class="inline-block transition-transform duration-200 text-sm -rotate-90">▼</span>
@@ -84,7 +110,48 @@
             </div>
         </div>
 
-        <!-- 拉线GIF区域 -->
+        <div class="mb-16">
+            <h2 class="text-center font-bold text-xl mb-8 tracking-wider cursor-pointer select-none" onclick="toggleSection('paimian-container', this)">
+                排面模板列表：<span class="inline-block transition-transform duration-200 text-sm -rotate-90">▼</span>
+            </h2>
+            <div id="paimian-container" class="space-y-6 mb-6 hidden"></div>
+            <div class="flex items-start hidden">
+                <button onclick="addTextItem('paimian-container', '', '请输入排面模板内容 (支持多行，可用变量 名字、金额)')"
+                    class="grow border-[3px] border-black p-4 font-bold flex flex-col items-center justify-center hover:bg-[#b5e0bb] transition-colors cursor-pointer w-full bg-[#e6f4e8]">
+                    <span class="mb-2 tracking-wide">点击添加新排面模板</span>
+                    <span class="text-3xl leading-none font-black">+</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="mb-16">
+            <h2 class="text-center font-bold text-xl mb-8 tracking-wider cursor-pointer select-none" onclick="toggleSection('huaka-container', this)">
+                划卡模板列表：<span class="inline-block transition-transform duration-200 text-sm -rotate-90">▼</span>
+            </h2>
+            <div id="huaka-container" class="space-y-6 mb-6 hidden"></div>
+            <div class="flex items-start hidden">
+                <button onclick="addTextItem('huaka-container', '', '请输入划卡模板内容 (可用变量 会员1、接待1、金额1、时间1)')"
+                    class="grow border-[3px] border-black p-4 font-bold flex flex-col items-center justify-center hover:bg-[#b5e0bb] transition-colors cursor-pointer w-full bg-[#e6f4e8]">
+                    <span class="mb-2 tracking-wide">点击添加新划卡模板</span>
+                    <span class="text-3xl leading-none font-black">+</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="mb-16">
+            <h2 class="text-center font-bold text-xl mb-8 tracking-wider cursor-pointer select-none" onclick="toggleSection('shield-container', this)">
+                屏蔽词列表：<span class="inline-block transition-transform duration-200 text-sm -rotate-90">▼</span>
+            </h2>
+            <div id="shield-container" class="space-y-6 mb-6 hidden"></div>
+            <div class="flex items-start hidden">
+                <button onclick="addTextItem('shield-container', '', '请输入需要拦截的屏蔽词...')"
+                    class="grow border-[3px] border-black p-4 font-bold flex flex-col items-center justify-center hover:bg-[#b5e0bb] transition-colors cursor-pointer w-full bg-[#e6f4e8]">
+                    <span class="mb-2 tracking-wide">点击添加新屏蔽词</span>
+                    <span class="text-3xl leading-none font-black">+</span>
+                </button>
+            </div>
+        </div>
+
         <div>
             <h2 class="text-center font-bold text-xl mb-8 tracking-wider">拉线GIF (全局仅限一张)：</h2>
             <div id="laxian-paste-zone" tabindex="0"
@@ -103,7 +170,6 @@
             </div>
         </div>
 
-        <!-- 底部操作按钮：导入与保存 -->
         <div class="mt-16 flex flex-col sm:flex-row justify-center gap-6">
             <button onclick="importData()"
                 class="border-[4px] border-black bg-[#e6f4e8] text-black px-12 py-4 text-2xl font-bold tracking-widest hover:bg-[#b5e0bb] transition-all cursor-pointer shadow-[8px_8px_0px_0px_rgba(0,0,0,0.2)] active:shadow-none active:translate-y-2 active:translate-x-2">导入
@@ -114,13 +180,11 @@
 
     </div>
 
-    <!-- 隐藏的文件上传组件 -->
     <input type="file" id="import-file" accept=".json" class="hidden" onchange="handleFileSelect(event)">
     <input type="file" id="image-upload" accept="image/*" class="hidden" onchange="handleImageUpload(event)">
     <input type="file" id="laxian-upload" accept="image/gif, image/jpeg, image/png, image/webp" class="hidden"
         onchange="handleLaxianUpload(event)">
 
-    <!-- 消息弹窗模态框 -->
     <div id="message-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <div class="bg-white/10 backdrop-blur-sm border-[4px] border-black p-8 max-w-sm w-full mx-4 shadow-xl">
             <p id="message-text" class="text-xl font-bold mb-8 text-center whitespace-pre-line"></p>
@@ -136,7 +200,7 @@
         // 鉴权Token
         let currentToken = "";
 
-        // 全局初始数据，保留不在此页面展示和修改的其他配置(如管理员列表等)不变
+        // 全局初始数据，保留不在此页面展示和修改的其他配置不变
         let globalOriginalData = {
             "mode": "pro", "super_admins": [], "kefus": [], "online_kefus": [],
             "preset_lines": [], "custom_commands": {}, "paimian_lines": [],
@@ -153,16 +217,12 @@
         // 功能：折叠与展开对应的列表区块，同时旋转箭头指示器
         function toggleSection(containerId, headerElement) {
             const container = document.getElementById(containerId);
-            
-            // Toggle the visibility of the main container
             container.classList.toggle('hidden');
             
-            // Toggle the visibility of the 'Add' button right below it
             if (container.nextElementSibling) {
                 container.nextElementSibling.classList.toggle('hidden');
             }
             
-            // Rotate the arrow indicator
             const arrow = headerElement.querySelector('span');
             if (arrow) {
                 arrow.classList.toggle('-rotate-90');
@@ -228,6 +288,17 @@
             }
         }
 
+        // 功能：删除专门的纯文字列表项，并重排编号
+        function deleteTextItem(btnElement) {
+            const itemRow = btnElement.closest('.text-item');
+            if (itemRow) {
+                const container = itemRow.parentElement;
+                itemRow.remove();
+                const indices = container.querySelectorAll('.item-index');
+                indices.forEach((el, idx) => { el.innerText = (idx + 1) + '.'; });
+            }
+        }
+
         // 功能：动态插入一个新的“短句”输入面板到列表中
         function addPhrase(content = '') {
             const container = document.getElementById('phrases-container');
@@ -246,7 +317,7 @@
             container.insertAdjacentHTML('beforeend', html);
         }
 
-        // 功能：动态插入一个新的“指令”输入面板到列表中，支持填写触发词
+        // 功能：动态插入一个新的“指令”输入面板到列表中
         function addCommand(trigger = '', content = '') {
             const container = document.getElementById('commands-container');
             const html = `
@@ -265,9 +336,33 @@
             container.insertAdjacentHTML('beforeend', html);
         }
 
-        // 功能：页面初始化加载入口，解析URL参数，绑定全局粘贴等事件
+        // 功能：动态插入一个新的“纯文字”输入面板（适用于 QQ 号、屏蔽词、模板等）
+        function addTextItem(containerId, content = '', placeholder = '') {
+            const container = document.getElementById(containerId);
+            const index = container.children.length + 1;
+            const html = `
+                <div class="text-item border-[3px] border-black bg-white/40 group">
+                    <div class="flex justify-between items-center border-b-[3px] border-black px-3 py-1.5 bg-[#e6f4e8]">
+                        <span class="font-black text-base item-index">${index}.</span>
+                        <button onclick="deleteTextItem(this)" title="删除此项" class="border-[2px] border-black w-7 h-7 flex items-center justify-center font-black text-sm bg-white hover:bg-red-500 hover:text-white transition-colors cursor-pointer shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-y-0.5 active:translate-x-0.5">X</button>
+                    </div>
+                    <div class="p-4 font-bold relative">
+                        <textarea class="w-full min-h-[80px] bg-transparent outline-none resize-y font-bold" placeholder="${placeholder}">${content}</textarea>
+                    </div>
+                </div>`;
+            container.insertAdjacentHTML('beforeend', html);
+        }
+
+        // 功能：页面初始化加载入口，解析URL参数，初始化默认空输入框等
         window.onload = function () {
-            addPhrase(); addCommand();
+            addPhrase(); 
+            addCommand();
+            addTextItem('super-admins-container', '', '请输入超管QQ号...');
+            addTextItem('kefus-container', '', '请输入客服QQ号...');
+            addTextItem('online-kefus-container', '', '请输入在线客服QQ号...');
+            addTextItem('paimian-container', '', '请输入排面模板内容 (支持多行，可用变量如 名字、金额)...');
+            addTextItem('huaka-container', '', '请输入划卡模板内容 (支持多行，可用变量如 会员1、接待1、金额1)...');
+            addTextItem('shield-container', '', '请输入需要拦截的屏蔽词...');
 
             const urlParams = new URLSearchParams(window.location.search);
             const groupIdFromUrl = urlParams.get('group');
@@ -318,8 +413,15 @@
             globalOriginalData = { ...globalOriginalData, ...data };
             initialFilePaths.clear();
 
+            // 清空现有容器
             document.getElementById('phrases-container').innerHTML = '';
             document.getElementById('commands-container').innerHTML = '';
+            document.getElementById('super-admins-container').innerHTML = '';
+            document.getElementById('kefus-container').innerHTML = '';
+            document.getElementById('online-kefus-container').innerHTML = '';
+            document.getElementById('paimian-container').innerHTML = '';
+            document.getElementById('huaka-container').innerHTML = '';
+            document.getElementById('shield-container').innerHTML = '';
 
             const collectFiles = (segments) => {
                 if (Array.isArray(segments)) {
@@ -327,6 +429,7 @@
                 }
             };
 
+            // 渲染短句
             if (data.preset_lines && Array.isArray(data.preset_lines)) {
                 data.preset_lines.forEach(lineSegments => {
                     collectFiles(lineSegments);
@@ -335,6 +438,7 @@
             }
             if (document.getElementById('phrases-container').children.length === 0) addPhrase();
 
+            // 渲染指令
             if (data.custom_commands && typeof data.custom_commands === 'object') {
                 Object.entries(data.custom_commands).forEach(([trigger, segments]) => {
                     collectFiles(segments);
@@ -343,6 +447,43 @@
             }
             if (document.getElementById('commands-container').children.length === 0) addCommand();
 
+            // 渲染超管
+            if (data.super_admins && Array.isArray(data.super_admins)) {
+                data.super_admins.forEach(item => addTextItem('super-admins-container', item, '请输入超管QQ号...'));
+            }
+            if (document.getElementById('super-admins-container').children.length === 0) addTextItem('super-admins-container', '', '请输入超管QQ号...');
+
+            // 渲染客服
+            if (data.kefus && Array.isArray(data.kefus)) {
+                data.kefus.forEach(item => addTextItem('kefus-container', item, '请输入客服QQ号...'));
+            }
+            if (document.getElementById('kefus-container').children.length === 0) addTextItem('kefus-container', '', '请输入客服QQ号...');
+
+            // 渲染在线客服
+            if (data.online_kefus && Array.isArray(data.online_kefus)) {
+                data.online_kefus.forEach(item => addTextItem('online-kefus-container', item, '请输入在线客服QQ号...'));
+            }
+            if (document.getElementById('online-kefus-container').children.length === 0) addTextItem('online-kefus-container', '', '请输入在线客服QQ号...');
+
+            // 渲染排面
+            if (data.paimian_lines && Array.isArray(data.paimian_lines)) {
+                data.paimian_lines.forEach(item => addTextItem('paimian-container', item, '请输入排面模板内容 (支持多行，可用变量如 名字、金额)...'));
+            }
+            if (document.getElementById('paimian-container').children.length === 0) addTextItem('paimian-container', '', '请输入排面模板内容 (支持多行，可用变量如 名字、金额)...');
+
+            // 渲染划卡
+            if (data.huaka_lines && Array.isArray(data.huaka_lines)) {
+                data.huaka_lines.forEach(item => addTextItem('huaka-container', item, '请输入划卡模板内容 (支持多行，可用变量如 会员1、接待1、金额1)...'));
+            }
+            if (document.getElementById('huaka-container').children.length === 0) addTextItem('huaka-container', '', '请输入划卡模板内容 (支持多行，可用变量如 会员1、接待1、金额1)...');
+
+            // 渲染屏蔽词
+            if (data.shield_words && Array.isArray(data.shield_words)) {
+                data.shield_words.forEach(item => addTextItem('shield-container', item, '请输入需要拦截的屏蔽词...'));
+            }
+            if (document.getElementById('shield-container').children.length === 0) addTextItem('shield-container', '', '请输入需要拦截的屏蔽词...');
+
+            // 渲染拉线GIF
             if (data.laxian_gifs && data.laxian_gifs.length > 0) {
                 const laxianPath = data.laxian_gifs[0];
                 initialFilePaths.add(laxianPath);
@@ -355,7 +496,7 @@
             }
         }
 
-        // 功能：将JSON中数组格式的数据分片（纯文本或图片信息）转换为页面支持预览的 HTML 内容
+        // 功能：将JSON中数组格式的数据分片转换为页面支持预览的 HTML 内容
         function formatSegmentsToHtml(segments) {
             if (!segments || !Array.isArray(segments)) { return typeof segments === 'string' ? segments : ''; }
             let html = '';
@@ -434,7 +575,20 @@
             event.target.value = '';
         }
 
-        // 功能：收集整合页面输入的所有数据，转换页面新增图片的格式为 Blob 等待上传，最后与 JSON 配置一起提交至服务器
+        // 内部辅助函数：专门从文字容器提取非空纯文本数组
+        function extractTextArray(containerId) {
+            const arr = [];
+            const textareas = document.querySelectorAll(`#${containerId} .text-item textarea`);
+            textareas.forEach(ta => {
+                const val = ta.value.trim();
+                if (val !== '') {
+                    arr.push(val);
+                }
+            });
+            return arr;
+        }
+
+        // 功能：收集整合页面输入的所有数据并随配置一起提交至服务器
         async function submitData() {
             const groupId = document.getElementById('group-id-input').value.trim();
             if (!groupId) { showMessage('请先输入群号！'); return; }
@@ -449,7 +603,6 @@
             usedFilePaths.clear();
             let imageIndex = 0;
 
-            // 内部辅助递归函数：将可编辑元素(contenteditable)里的原生 HTML 内容转化为后端能接收的数据分片数组(文本和图片)
             async function processContent(element, type) {
                 let segments = [];
                 let currentText = "";
@@ -505,7 +658,6 @@
                 for (let child of element.childNodes) await traverse(child);
                 if (currentText) segments.push({ type: "text", text: currentText });
 
-                // 自动清理首尾的所有空白与多余换行（同时修复旧数据的遗留空行问题）
                 if (segments.length > 0) {
                     if (segments[0].type === 'text') {
                         segments[0].text = segments[0].text.trimStart();
@@ -519,7 +671,7 @@
             }
 
             try {
-                // 步骤 1：收集并处理所有有效的短句内容
+                // 步骤 1：收集短句
                 const phraseDivs = document.querySelectorAll('#phrases-container .phrase-item div[contenteditable="true"]');
                 for (const div of phraseDivs) {
                     if (div.innerText.trim() !== '' || div.querySelector('img')) {
@@ -528,7 +680,7 @@
                     }
                 }
 
-                // 步骤 2：收集并处理所有有效的自定义指令
+                // 步骤 2：收集自定义指令
                 const commandRows = document.querySelectorAll('#commands-container .command-item');
                 for (const row of commandRows) {
                     const editables = row.querySelectorAll('div[contenteditable]');
@@ -541,7 +693,15 @@
                     }
                 }
 
-                // 步骤 3：收集并处理全群唯一的拉线 GIF 配置信息
+                // 步骤 3：提取新增的 6 个纯文字数组配置
+                const super_admins = extractTextArray('super-admins-container');
+                const kefus = extractTextArray('kefus-container');
+                const online_kefus = extractTextArray('online-kefus-container');
+                const paimian_lines = extractTextArray('paimian-container');
+                const huaka_lines = extractTextArray('huaka-container');
+                const shield_words = extractTextArray('shield-container');
+
+                // 步骤 4：收集拉线 GIF
                 const newLaxianGifs = [];
                 const laxianPreviewDiv = document.getElementById('laxian-preview');
                 const laxianImg = laxianPreviewDiv.querySelector('img');
@@ -572,20 +732,27 @@
                     if (filePath) { newLaxianGifs.push(filePath); }
                 }
 
-                // 步骤 4：覆盖更新原始的数据对象以生成最新的 JSON 文本内容
+                // 步骤 5：覆盖更新全局对象，确保全字段同步
                 globalOriginalData.preset_lines = preset_lines;
                 globalOriginalData.custom_commands = custom_commands;
+                globalOriginalData.super_admins = super_admins;
+                globalOriginalData.kefus = kefus;
+                globalOriginalData.online_kefus = online_kefus;
+                globalOriginalData.paimian_lines = paimian_lines;
+                globalOriginalData.huaka_lines = huaka_lines;
+                globalOriginalData.shield_words = shield_words;
                 globalOriginalData.laxian_gifs = newLaxianGifs;
+                
                 formData.append('json_data', JSON.stringify(globalOriginalData));
 
-                // 步骤 5：比对追踪图片文件池差异，标记并删除页面配置中已经被移除的无用老图片
+                // 步骤 6：废弃图片处理
                 const filesToDelete = [];
                 for (const path of initialFilePaths) {
                     if (!usedFilePaths.has(path)) { filesToDelete.push(path); }
                 }
                 formData.append('deleted_images', JSON.stringify(filesToDelete));
 
-                // 步骤 6：发送 POST 请求执行服务器的数据持久化操作
+                // 发送 POST 请求
                 const response = await fetch(`${API_BASE_URL}/api/upload`, {
                     method: 'POST',
                     body: formData,
