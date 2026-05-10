@@ -41,36 +41,6 @@
         </div>
 
         <div class="mb-16">
-            <h2 class="text-center font-bold text-xl mb-8 tracking-wider cursor-pointer select-none" onclick="toggleSection('super-admins-container', this)">
-                超管列表：<span class="inline-block transition-transform duration-200 text-sm -rotate-90">▼</span>
-            </h2>
-            <div id="super-admins-container" class="mb-6 hidden border-[3px] border-black bg-white/40 p-4">
-                <textarea id="super-admins-textarea" class="w-full min-h-[120px] bg-transparent outline-none resize-y font-bold leading-relaxed" placeholder="请输入超管QQ号，每行一个。&#10;拉取时会自动加载昵称，保存时会自动提取纯QQ号。&#10;支持手打格式如：小小糕（2567864113）"></textarea>
-            </div>
-            <div class="hidden"></div>
-        </div>
-
-        <div class="mb-16">
-            <h2 class="text-center font-bold text-xl mb-8 tracking-wider cursor-pointer select-none" onclick="toggleSection('kefus-container', this)">
-                客服列表：<span class="inline-block transition-transform duration-200 text-sm -rotate-90">▼</span>
-            </h2>
-            <div id="kefus-container" class="mb-6 hidden border-[3px] border-black bg-white/40 p-4">
-                <textarea id="kefus-textarea" class="w-full min-h-[120px] bg-transparent outline-none resize-y font-bold leading-relaxed" placeholder="请输入客服QQ号，每行一个。&#10;拉取时会自动加载昵称，保存时会自动提取纯QQ号。&#10;支持手打格式如：小小糕（2567864113）"></textarea>
-            </div>
-            <div class="hidden"></div>
-        </div>
-
-        <div class="mb-16">
-            <h2 class="text-center font-bold text-xl mb-8 tracking-wider cursor-pointer select-none" onclick="toggleSection('online-kefus-container', this)">
-                在线客服列表：<span class="inline-block transition-transform duration-200 text-sm -rotate-90">▼</span>
-            </h2>
-            <div id="online-kefus-container" class="mb-6 hidden border-[3px] border-black bg-white/40 p-4">
-                <textarea id="online-kefus-textarea" class="w-full min-h-[120px] bg-transparent outline-none resize-y font-bold leading-relaxed" placeholder="请输入在线客服QQ号，每行一个。&#10;拉取时会自动加载昵称，保存时会自动提取纯QQ号。&#10;支持手打格式如：小小糕（2567864113）"></textarea>
-            </div>
-            <div class="hidden"></div>
-        </div>
-
-        <div class="mb-16">
             <h2 class="text-center font-bold text-xl mb-8 tracking-wider cursor-pointer select-none" onclick="toggleSection('phrases-container', this)">
                 短句列表：<span class="inline-block transition-transform duration-200 text-sm -rotate-90">▼</span>
             </h2>
@@ -141,7 +111,7 @@
         </div>
 
         <div>
-            <h2 class="text-center font-bold text-xl mb-8 tracking-wider">拉线GIF (全局仅限一张)：</h2>
+            <h2 class="text-center font-bold text-xl mb-8 tracking-wider">拉线GIF (添加之后才能触发‘呼叫客服’)：</h2>
             <div id="laxian-paste-zone" tabindex="0"
                 class="flex flex-col items-center justify-center border-[3px] border-black p-8 bg-[#e6f4e8] relative min-h-[200px] outline-none">
                 <div id="laxian-preview" class="mb-6 empty:hidden flex justify-center w-full"></div>
@@ -182,13 +152,10 @@
     </div>
 
     <script>
-        // 服务器接口基础路径
         const API_BASE_URL = "https://api.xiaoxiaogao.xyz";
-
-        // 鉴权Token
         let currentToken = "";
 
-        // 全局初始数据
+        // 全局初始数据，保留完整字段结构
         let globalOriginalData = {
             "mode": "pro", "super_admins": [], "kefus": [], "online_kefus": [],
             "preset_lines": [], "custom_commands": {}, "paimian_lines": [],
@@ -199,86 +166,6 @@
         let usedFilePaths = new Set();
         let currentEditTarget = null;
 
-        // --- 【新增核心工具】批量拉取腾讯官方QQ昵称 (JSONP) ---
-        // --- 【修复 1】解决腾讯中文昵称乱码问题 ---
-        function fetchQQNicknamesBatch(qqArray) {
-            return new Promise((resolve) => {
-                if (!qqArray || qqArray.length === 0) {
-                    resolve({});
-                    return;
-                }
-                const validQQs = [...new Set(qqArray.map(String).filter(q => /^\d+$/.test(q)))];
-                if (validQQs.length === 0) {
-                    resolve({});
-                    return;
-                }
-
-                window.portraitCallBack = function (data) {
-                    const result = {};
-                    try {
-                        for (const qq in data) {
-                            if (data[qq] && data[qq][6]) {
-                                result[qq] = data[qq][6];
-                            }
-                        }
-                    } catch (e) { console.error(e); }
-                    resolve(result);
-                };
-
-                const script = document.createElement('script');
-                // 核心修复：换用腾讯最新的 UTF-8 标准头像昵称接口，彻底告别乱码！
-                script.src = `https://users.qzone.qq.com/fcg-bin/cgi_get_portrait.fcg?uins=${validQQs.join(',')}&g_tk=1518561325`;
-                script.charset = 'utf-8'; 
-
-                script.onload = script.onerror = function () {
-                    script.remove();
-                    setTimeout(() => resolve({}), 500);
-                };
-
-                document.head.appendChild(script);
-            });
-        }
-
-        // --- 【新增核心工具】将QQ数组格式化为带昵称的多行文本 ---
-        function formatQQListWithNick(qqArray, nickMap) {
-            if (!qqArray || !Array.isArray(qqArray)) return "";
-            return qqArray.map(qq => {
-                const nick = nickMap[qq];
-                return nick ? `${nick}（${qq}）` : qq;
-            }).join('\n');
-        }
-
-        // --- 【新增核心工具 优化点 3】保存时从多行文本框精准只提取纯QQ号 ---
-        // --- 【修复 2】完美兼容管理员只输入纯QQ号的情况 ---
-        function extractQQArrayFromTextarea(textareaId) {
-            const textarea = document.getElementById(textareaId);
-            if (!textarea) return [];
-            const lines = textarea.value.split('\n');
-            const result = [];
-
-            lines.forEach(line => {
-                line = line.trim();
-                if (!line) return;
-
-                // 规则 A：优先精准匹配带括号的完整格式，例如 "小小糕（2567864113）"
-                const match = line.match(/[(（]\s*(\d+)\s*[)）]/);
-                if (match) {
-                    result.push(match[1]);
-                } else {
-                    // 规则 B（核心修复）：如果整行全是数字，或者包含数字，直接提取纯数字！
-                    // 完美支持手打输入 "123456" 或 "新客服 123456"
-                    const digitsMatch = line.match(/\d+/g);
-                    if (digitsMatch) {
-                        // 提取最后一段连续数字作为QQ号
-                        result.push(digitsMatch[digitsMatch.length - 1]);
-                    }
-                }
-            });
-
-            return [...new Set(result)];
-        }
-
-        // 功能：折叠与展开对应的列表区块
         function toggleSection(containerId, headerElement) {
             const container = document.getElementById(containerId);
             container.classList.toggle('hidden');
@@ -410,7 +297,6 @@
         window.onload = function () {
             addPhrase();
             addCommand();
-            // 移除了原本超管/客服默认注入单个条目的逻辑，保持纯净大文本框
             addTextItem('paimian-container', '', '请输入排面模板内容 (支持多行，可用变量 名字、金额)');
             addTextItem('huaka-container', '', '请输入划卡模板内容 (支持多行，可用变量 会员1、接待1、金额1、时间1)');
             addTextItem('shield-container', '', '请输入需要拦截的屏蔽词...');
@@ -457,22 +343,16 @@
 
         function closeModal() { document.getElementById('message-modal').classList.add('hidden'); }
 
-        // --- 【修改核心】异步铺配并渲染 UI 数据 ---
         async function loadDataToUI(data) {
+            // 原汁原味保留从服务器传回来的完整数据结构（包括在 QQ 上管理的客服/超管）
             globalOriginalData = { ...globalOriginalData, ...data };
             initialFilePaths.clear();
 
-            // 清空普通列表容器
             document.getElementById('phrases-container').innerHTML = '';
             document.getElementById('commands-container').innerHTML = '';
             document.getElementById('paimian-container').innerHTML = '';
             document.getElementById('huaka-container').innerHTML = '';
             document.getElementById('shield-container').innerHTML = '';
-
-            // 清除共用大文本框残留内容
-            document.getElementById('super-admins-textarea').value = '';
-            document.getElementById('kefus-textarea').value = '';
-            document.getElementById('online-kefus-textarea').value = '';
 
             const collectFiles = (segments) => {
                 if (Array.isArray(segments)) {
@@ -480,7 +360,6 @@
                 }
             };
 
-            // 渲染短句
             if (data.preset_lines && Array.isArray(data.preset_lines)) {
                 data.preset_lines.forEach(lineSegments => {
                     collectFiles(lineSegments);
@@ -489,7 +368,6 @@
             }
             if (document.getElementById('phrases-container').children.length === 0) addPhrase();
 
-            // 渲染指令
             if (data.custom_commands && typeof data.custom_commands === 'object') {
                 Object.entries(data.custom_commands).forEach(([trigger, segments]) => {
                     collectFiles(segments);
@@ -498,38 +376,21 @@
             }
             if (document.getElementById('commands-container').children.length === 0) addCommand();
 
-            // === 【优化点 1 & 2 执行处】批量拉取所有相关QQ昵称并自动拼接 ===
-            const allRolesQQs = [
-                ...(data.super_admins || []),
-                ...(data.kefus || []),
-                ...(data.online_kefus || [])
-            ];
-            const nickMap = await fetchQQNicknamesBatch(allRolesQQs);
-
-            // 格式化载入单一共用输入框
-            document.getElementById('super-admins-textarea').value = formatQQListWithNick(data.super_admins, nickMap);
-            document.getElementById('kefus-textarea').value = formatQQListWithNick(data.kefus, nickMap);
-            document.getElementById('online-kefus-textarea').value = formatQQListWithNick(data.online_kefus, nickMap);
-
-            // 渲染排面
             if (data.paimian_lines && Array.isArray(data.paimian_lines)) {
                 data.paimian_lines.forEach(item => addTextItem('paimian-container', item, '请输入排面模板内容 (支持多行，可用变量 名字、金额)'));
             }
             if (document.getElementById('paimian-container').children.length === 0) addTextItem('paimian-container', '', '请输入排面模板内容 (支持多行，可用变量 名字、金额)');
 
-            // 渲染划卡
             if (data.huaka_lines && Array.isArray(data.huaka_lines)) {
                 data.huaka_lines.forEach(item => addTextItem('huaka-container', item, '请输入划卡模板内容 (支持多行，可用变量如 会员1、接待1、金额1、时间1)'));
             }
             if (document.getElementById('huaka-container').children.length === 0) addTextItem('huaka-container', '', '请输入划卡模板内容 (支持多行，可用变量如 会员1、接待1、金额1、时间1)');
 
-            // 渲染屏蔽词
             if (data.shield_words && Array.isArray(data.shield_words)) {
                 data.shield_words.forEach(item => addTextItem('shield-container', item, '请输入需要拦截的屏蔽词...'));
             }
             if (document.getElementById('shield-container').children.length === 0) addTextItem('shield-container', '', '请输入需要拦截的屏蔽词...');
 
-            // 渲染拉线GIF
             if (data.laxian_gifs && data.laxian_gifs.length > 0) {
                 const laxianPath = data.laxian_gifs[0];
                 initialFilePaths.add(laxianPath);
@@ -584,7 +445,7 @@
                 if (!response.ok) throw new Error("网络响应错误");
 
                 const data = await response.json();
-                await loadDataToUI(data); // 确保等待异步昵称加载完成
+                await loadDataToUI(data);
 
                 showMessage('成功拉取该群现有配置！\n现在您可以继续修改了。');
             } catch (error) {
@@ -711,7 +572,6 @@
             }
 
             try {
-                // 步骤 1：收集短句
                 const phraseDivs = document.querySelectorAll('#phrases-container .phrase-item div[contenteditable="true"]');
                 for (const div of phraseDivs) {
                     if (div.innerText.trim() !== '' || div.querySelector('img')) {
@@ -720,7 +580,6 @@
                     }
                 }
 
-                // 步骤 2：收集自定义指令
                 const commandRows = document.querySelectorAll('#commands-container .command-item');
                 for (const row of commandRows) {
                     const editables = row.querySelectorAll('div[contenteditable]');
@@ -733,16 +592,10 @@
                     }
                 }
 
-                // === 【优化点 3 执行处】自动清洗文本框，仅提取干净的纯QQ号 ===
-                const super_admins = extractQQArrayFromTextarea('super-admins-textarea');
-                const kefus = extractQQArrayFromTextarea('kefus-textarea');
-                const online_kefus = extractQQArrayFromTextarea('online-kefus-textarea');
-                
                 const paimian_lines = extractTextArray('paimian-container');
                 const huaka_lines = extractTextArray('huaka-container');
                 const shield_words = extractTextArray('shield-container');
 
-                // 步骤 4：收集拉线 GIF
                 const newLaxianGifs = [];
                 const laxianPreviewDiv = document.getElementById('laxian-preview');
                 const laxianImg = laxianPreviewDiv.querySelector('img');
@@ -773,27 +626,22 @@
                     if (filePath) { newLaxianGifs.push(filePath); }
                 }
 
-                // 步骤 5：无缝适配原有对象属性，后端获取到的依然是纯净名单
+                // 核心：只更新网页负责的部分，其余全部沿用 loadDataToUI 加载进来的云端原始数据！
                 globalOriginalData.preset_lines = preset_lines;
                 globalOriginalData.custom_commands = custom_commands;
-                globalOriginalData.super_admins = super_admins;
-                globalOriginalData.kefus = kefus;
-                globalOriginalData.online_kefus = online_kefus;
                 globalOriginalData.paimian_lines = paimian_lines;
                 globalOriginalData.huaka_lines = huaka_lines;
                 globalOriginalData.shield_words = shield_words;
                 globalOriginalData.laxian_gifs = newLaxianGifs;
-                
+
                 formData.append('json_data', JSON.stringify(globalOriginalData));
 
-                // 步骤 6：废弃图片处理
                 const filesToDelete = [];
                 for (const path of initialFilePaths) {
                     if (!usedFilePaths.has(path)) { filesToDelete.push(path); }
                 }
                 formData.append('deleted_images', JSON.stringify(filesToDelete));
 
-                // 发送 POST 请求
                 const response = await fetch(`${API_BASE_URL}/api/upload`, {
                     method: 'POST',
                     body: formData,
