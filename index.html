@@ -477,7 +477,7 @@
             }
 
             try {
-                const phraseDivs = document.querySelectorAll('#phrases-container .command-item > div:last-child, #phrases-container .phrase-item > div:last-child');
+                const phraseDivs = document.querySelectorAll('#phrases-container .phrase-item div[contenteditable="true"]');
                 for (const div of phraseDivs) {
                     if (div.innerText.trim() !== '' || div.querySelector('img')) {
                         const segs = await processContent(div, 'line');
