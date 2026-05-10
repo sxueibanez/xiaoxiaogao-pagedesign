@@ -78,13 +78,13 @@
 
         <div>
             <h2 class="text-center font-bold text-xl mb-8 tracking-wider">拉线GIF (全局仅限一张)：</h2>
-            <div
-                class="flex flex-col items-center justify-center border-[3px] border-black p-8 bg-[#e6f4e8] relative min-h-[200px]">
+            <div id="laxian-paste-zone" tabindex="0"
+                class="flex flex-col items-center justify-center border-[3px] border-black p-8 bg-[#e6f4e8] relative min-h-[200px] outline-none">
                 <div id="laxian-preview" class="mb-6 empty:hidden flex justify-center w-full"></div>
                 <div class="flex gap-4">
                     <button onclick="triggerLaxianUpload()"
                         class="border-[3px] border-black p-3 font-bold hover:bg-[#b5e0bb] transition-colors cursor-pointer bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-y-1 active:translate-x-1">
-                        <span id="laxian-btn-text">点击上传/更换GIF</span>
+                        <span id="laxian-btn-text">点击上传/粘贴更换GIF</span>
                     </button>
                     <button onclick="clearLaxian()" id="laxian-clear-btn"
                         class="hidden border-[3px] border-black p-3 font-bold bg-red-400 hover:bg-red-500 text-white transition-colors cursor-pointer shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-y-1 active:translate-x-1">
@@ -120,7 +120,6 @@
     <script>
         const API_BASE_URL = "https://api.xiaoxiaogao.xyz";
 
-        // --- 新增：全局保存从 URL 提取的 Token ---
         let currentToken = "";
 
         let globalOriginalData = {
@@ -172,7 +171,7 @@
 
         function clearLaxian() {
             document.getElementById('laxian-preview').innerHTML = '';
-            document.getElementById('laxian-btn-text').innerText = "点击上传GIF";
+            document.getElementById('laxian-btn-text').innerText = "点击上传/粘贴更换GIF";
             document.getElementById('laxian-clear-btn').classList.add('hidden');
         }
 
@@ -226,7 +225,6 @@
             const urlParams = new URLSearchParams(window.location.search);
             const groupIdFromUrl = urlParams.get('group');
 
-            // --- 新增：提取 URL 中的 Token ---
             currentToken = urlParams.get('token');
 
             if (groupIdFromUrl) {
@@ -234,6 +232,29 @@
                 setTimeout(() => {
                     fetchServerData();
                 }, 500);
+            }
+
+            // --- 新增：给拉线GIF区域绑定直接粘贴事件 ---
+            const pasteZone = document.getElementById('laxian-paste-zone');
+            if (pasteZone) {
+                pasteZone.addEventListener('paste', function (e) {
+                    const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+                    for (let i = 0; i < items.length; i++) {
+                        if (items[i].type.indexOf("image") !== -1) {
+                            e.preventDefault();
+                            const file = items[i].getAsFile();
+                            const reader = new FileReader();
+                            reader.onload = function (event) {
+                                const previewDiv = document.getElementById('laxian-preview');
+                                previewDiv.innerHTML = `<img src="${event.target.result}" style="max-height: 250px; border: 4px solid black;">`;
+                                document.getElementById('laxian-btn-text').innerText = "更换GIF";
+                                document.getElementById('laxian-clear-btn').classList.remove('hidden');
+                            };
+                            reader.readAsDataURL(file);
+                            break;
+                        }
+                    }
+                });
             }
         };
 
@@ -308,7 +329,6 @@
             showMessage('正在从服务器获取当前配置，请稍候...');
 
             try {
-                // --- 修改：拉取数据时在请求头附带 Token ---
                 const response = await fetch(`${API_BASE_URL}/api/data/${groupId}`, {
                     method: 'GET',
                     headers: {
@@ -316,7 +336,6 @@
                     }
                 });
 
-                // --- 新增：处理 Token 失效/未授权情况 ---
                 if (response.status === 403) {
                     showMessage('⛔ 访问口令已失效或未授权！\n请在 QQ 群内重新发送“本群状态”获取新链接。');
                     return;
@@ -495,7 +514,6 @@
                 }
                 formData.append('deleted_images', JSON.stringify(filesToDelete));
 
-                // --- 修改：提交数据时在请求头附带 Token ---
                 const response = await fetch(`${API_BASE_URL}/api/upload`, {
                     method: 'POST',
                     body: formData,
@@ -504,7 +522,6 @@
                     }
                 });
 
-                // --- 新增：处理 Token 失效情况 ---
                 if (response.status === 403) {
                     showMessage("⛔ 提交失败：此安全链接已过期作废！\n为保护数据安全，请在群内重新获取。");
                     return;
