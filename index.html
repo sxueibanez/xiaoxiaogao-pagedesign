@@ -472,7 +472,18 @@
                 }
 
                 for (let child of element.childNodes) await traverse(child);
-                if (currentText) segments.push({ type: "text", text: currentText.trimEnd() });
+                if (currentText) segments.push({ type: "text", text: currentText });
+
+                // 自动清理首尾的所有空白与多余换行（同时修复旧数据的遗留空行问题）
+                if (segments.length > 0) {
+                    if (segments[0].type === 'text') {
+                        segments[0].text = segments[0].text.trimStart();
+                    }
+                    if (segments[segments.length - 1].type === 'text') {
+                        segments[segments.length - 1].text = segments[segments.length - 1].text.trimEnd();
+                    }
+                }
+
                 return segments.filter(s => !(s.type === 'text' && s.text === ''));
             }
 
