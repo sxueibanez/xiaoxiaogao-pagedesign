@@ -52,9 +52,11 @@
         </div>
 
         <div class="mb-16">
-            <h2 class="text-center font-bold text-xl mb-8 tracking-wider">短句列表：</h2>
-            <div id="phrases-container" class="space-y-6 mb-6"></div>
-            <div class="flex items-start">
+            <h2 class="text-center font-bold text-xl mb-8 tracking-wider cursor-pointer select-none" onclick="toggleSection('phrases-container', this)">
+                短句列表：<span class="inline-block transition-transform duration-200 text-sm -rotate-90">▼</span>
+            </h2>
+            <div id="phrases-container" class="space-y-6 mb-6 hidden"></div>
+            <div class="flex items-start hidden">
                 <button onclick="addPhrase()"
                     class="grow border-[3px] border-black p-4 font-bold flex flex-col items-center justify-center hover:bg-[#b5e0bb] transition-colors cursor-pointer w-full bg-[#e6f4e8]">
                     <span class="mb-2 tracking-wide">点击添加新的短句</span>
@@ -64,9 +66,11 @@
         </div>
 
         <div class="mb-16">
-            <h2 class="text-center font-bold text-xl mb-8 tracking-wider">指令列表：</h2>
-            <div id="commands-container" class="space-y-6 mb-6"></div>
-            <div class="flex items-start">
+            <h2 class="text-center font-bold text-xl mb-8 tracking-wider cursor-pointer select-none" onclick="toggleSection('commands-container', this)">
+                指令列表：<span class="inline-block transition-transform duration-200 text-sm -rotate-90">▼</span>
+            </h2>
+            <div id="commands-container" class="space-y-6 mb-6 hidden"></div>
+            <div class="flex items-start hidden">
                 <button onclick="addCommand()"
                     class="grow border-[3px] border-black p-4 font-bold flex flex-col items-center justify-center hover:bg-[#b5e0bb] transition-colors cursor-pointer w-full bg-[#e6f4e8]">
                     <span class="mb-2 tracking-wide">点击添加新的指令</span>
@@ -130,6 +134,24 @@
         let initialFilePaths = new Set();
         let usedFilePaths = new Set();
         let currentEditTarget = null;
+
+        function toggleSection(containerId, headerElement) {
+            const container = document.getElementById(containerId);
+            
+            // Toggle the visibility of the main container
+            container.classList.toggle('hidden');
+            
+            // Toggle the visibility of the 'Add' button right below it
+            if (container.nextElementSibling) {
+                container.nextElementSibling.classList.toggle('hidden');
+            }
+            
+            // Rotate the arrow indicator
+            const arrow = headerElement.querySelector('span');
+            if (arrow) {
+                arrow.classList.toggle('-rotate-90');
+            }
+        }
 
         function triggerImageUpload(btnElement) {
             currentEditTarget = btnElement.previousElementSibling;
