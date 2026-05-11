@@ -171,18 +171,17 @@
         let usedFilePaths = new Set();
         let currentEditTarget = null;
 
+        // 全局富文本输入框粘贴事件接管（完美捕获图片流）
         document.addEventListener('paste', function (e) {
             const target = e.target;
-            // 只要是在 contenteditable 区域内粘贴
             if (target.closest('[contenteditable="true"]')) {
                 const items = (e.clipboardData || e.originalEvent.clipboardData).items;
                 for (let i = 0; i < items.length; i++) {
                     if (items[i].type.indexOf("image") !== -1) {
-                        e.preventDefault(); // 阻止浏览器默认的生成 blob 行为
+                        e.preventDefault(); 
                         const file = items[i].getAsFile();
                         const reader = new FileReader();
                         reader.onload = function (event) {
-                            // 使用 execCommand 可以精准将 Base64 图片插入到用户当前的光标聚焦位置
                             document.execCommand('insertImage', false, event.target.result);
                         };
                         reader.readAsDataURL(file);
@@ -370,7 +369,6 @@
         function closeModal() { document.getElementById('message-modal').classList.add('hidden'); }
 
         async function loadDataToUI(data) {
-            // 原汁原味保留从服务器传回来的完整数据结构（包括在 QQ 上管理的客服/超管）
             globalOriginalData = { ...globalOriginalData, ...data };
             initialFilePaths.clear();
 
@@ -548,6 +546,7 @@
                             const srcAttr = node.getAttribute('src');
                             let filePath = "";
 
+                            // 💡 终极移动端防线：强制转为合规的 File 对象并严格兜底后缀
                             if (srcAttr && srcAttr.startsWith('data:image')) {
                                 const parts = srcAttr.split(',');
                                 const mimeType = parts[0].match(/:(.*?);/)[1];
@@ -555,13 +554,27 @@
                                 const byteCharacters = atob(base64Data);
                                 const byteNumbers = new Array(byteCharacters.length);
                                 for (let j = 0; j < byteCharacters.length; j++) byteNumbers[j] = byteCharacters.charCodeAt(j);
-                                const blob = new Blob([new Uint8Array(byteNumbers)], { type: mimeType });
+                                
+                                // 强制清洗不规范扩展名
+                                let ext = 'jpg'; 
+                                if (mimeType.includes('png')) ext = 'png';
+                                else if (mimeType.includes('gif')) ext = 'gif';
+                                else if (mimeType.includes('webp')) ext = 'webp';
 
-                                const ext = mimeType === 'image/jpeg' ? 'jpg' : (mimeType.split('/')[1] || 'png');
                                 const fileName = `${type}_${Date.now()}_${imageIndex++}.${ext}`;
                                 filePath = `${groupId}/${type}/${fileName}`;
 
-                                formData.append('new_images', blob, fileName);
+                                // 强制传入真正的 File 实例，无视 WebKit 的恶意重命名机制
+                                const uint8Array = new Uint8Array(byteNumbers);
+                                let imageFileObj;
+                                try {
+                                    imageFileObj = new File([uint8Array], fileName, { type: mimeType });
+                                } catch (e) {
+                                    imageFileObj = new Blob([uint8Array], { type: mimeType });
+                                }
+
+                                // 传入最纯净的 fileName，抹平双端解析斜杠差异
+                                formData.append('new_images', imageFileObj, fileName);
                                 node.setAttribute('src', `${API_BASE_URL}/activity/${filePath}`);
                                 node.setAttribute('data-original-file', filePath);
                             }
@@ -636,13 +649,25 @@
                         const byteCharacters = atob(base64Data);
                         const byteNumbers = new Array(byteCharacters.length);
                         for (let j = 0; j < byteCharacters.length; j++) byteNumbers[j] = byteCharacters.charCodeAt(j);
-                        const blob = new Blob([new Uint8Array(byteNumbers)], { type: mimeType });
+                        
+                        let ext = 'gif';
+                        if (mimeType.includes('jpg') || mimeType.includes('jpeg')) ext = 'jpg';
+                        else if (mimeType.includes('png')) ext = 'png';
+                        else if (mimeType.includes('webp')) ext = 'webp';
 
-                        const ext = mimeType === 'image/jpeg' ? 'jpg' : (mimeType.split('/')[1] || 'gif');
                         const fileName = `laxian_${Date.now()}_${imageIndex++}.${ext}`;
                         filePath = `${groupId}/laxian/${fileName}`;
 
-                        formData.append('new_images', blob, fileName);
+                        // 同步升级拉线图片的打包防御
+                        const uint8Array = new Uint8Array(byteNumbers);
+                        let imageFileObj;
+                        try {
+                            imageFileObj = new File([uint8Array], fileName, { type: mimeType });
+                        } catch (e) {
+                            imageFileObj = new Blob([uint8Array], { type: mimeType });
+                        }
+
+                        formData.append('new_images', imageFileObj, fileName);
                         laxianImg.setAttribute('data-original-file', filePath);
                         usedFilePaths.add(filePath);
                     } else if (laxianImg.hasAttribute('data-original-file')) {
@@ -652,7 +677,6 @@
                     if (filePath) { newLaxianGifs.push(filePath); }
                 }
 
-                // 核心：只更新网页负责的部分，其余全部沿用 loadDataToUI 加载进来的云端原始数据！
                 globalOriginalData.preset_lines = preset_lines;
                 globalOriginalData.custom_commands = custom_commands;
                 globalOriginalData.paimian_lines = paimian_lines;
