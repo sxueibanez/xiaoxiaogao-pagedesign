@@ -41,7 +41,8 @@
         </div>
 
         <div class="mb-16">
-            <h2 class="text-center font-bold text-xl mb-8 tracking-wider cursor-pointer select-none" onclick="toggleSection('phrases-container', this)">
+            <h2 class="text-center font-bold text-xl mb-8 tracking-wider cursor-pointer select-none"
+                onclick="toggleSection('phrases-container', this)">
                 短句列表：<span class="inline-block transition-transform duration-200 text-sm -rotate-90">▼</span>
             </h2>
             <div id="phrases-container" class="space-y-6 mb-6 hidden"></div>
@@ -55,7 +56,8 @@
         </div>
 
         <div class="mb-16">
-            <h2 class="text-center font-bold text-xl mb-8 tracking-wider cursor-pointer select-none" onclick="toggleSection('commands-container', this)">
+            <h2 class="text-center font-bold text-xl mb-8 tracking-wider cursor-pointer select-none"
+                onclick="toggleSection('commands-container', this)">
                 指令列表：<span class="inline-block transition-transform duration-200 text-sm -rotate-90">▼</span>
             </h2>
             <div id="commands-container" class="space-y-6 mb-6 hidden"></div>
@@ -69,7 +71,8 @@
         </div>
 
         <div class="mb-16">
-            <h2 class="text-center font-bold text-xl mb-8 tracking-wider cursor-pointer select-none" onclick="toggleSection('paimian-container', this)">
+            <h2 class="text-center font-bold text-xl mb-8 tracking-wider cursor-pointer select-none"
+                onclick="toggleSection('paimian-container', this)">
                 排面模板列表：<span class="inline-block transition-transform duration-200 text-sm -rotate-90">▼</span>
             </h2>
             <div id="paimian-container" class="space-y-6 mb-6 hidden"></div>
@@ -83,7 +86,8 @@
         </div>
 
         <div class="mb-16">
-            <h2 class="text-center font-bold text-xl mb-8 tracking-wider cursor-pointer select-none" onclick="toggleSection('huaka-container', this)">
+            <h2 class="text-center font-bold text-xl mb-8 tracking-wider cursor-pointer select-none"
+                onclick="toggleSection('huaka-container', this)">
                 划卡模板列表：<span class="inline-block transition-transform duration-200 text-sm -rotate-90">▼</span>
             </h2>
             <div id="huaka-container" class="space-y-6 mb-6 hidden"></div>
@@ -97,7 +101,8 @@
         </div>
 
         <div class="mb-16">
-            <h2 class="text-center font-bold text-xl mb-8 tracking-wider cursor-pointer select-none" onclick="toggleSection('shield-container', this)">
+            <h2 class="text-center font-bold text-xl mb-8 tracking-wider cursor-pointer select-none"
+                onclick="toggleSection('shield-container', this)">
                 屏蔽词列表：<span class="inline-block transition-transform duration-200 text-sm -rotate-90">▼</span>
             </h2>
             <div id="shield-container" class="space-y-6 mb-6 hidden"></div>
@@ -166,6 +171,27 @@
         let usedFilePaths = new Set();
         let currentEditTarget = null;
 
+        document.addEventListener('paste', function (e) {
+            const target = e.target;
+            // 只要是在 contenteditable 区域内粘贴
+            if (target.closest('[contenteditable="true"]')) {
+                const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+                for (let i = 0; i < items.length; i++) {
+                    if (items[i].type.indexOf("image") !== -1) {
+                        e.preventDefault(); // 阻止浏览器默认的生成 blob 行为
+                        const file = items[i].getAsFile();
+                        const reader = new FileReader();
+                        reader.onload = function (event) {
+                            // 使用 execCommand 可以精准将 Base64 图片插入到用户当前的光标聚焦位置
+                            document.execCommand('insertImage', false, event.target.result);
+                        };
+                        reader.readAsDataURL(file);
+                        break;
+                    }
+                }
+            }
+        });
+        
         function toggleSection(containerId, headerElement) {
             const container = document.getElementById(containerId);
             container.classList.toggle('hidden');
@@ -535,7 +561,7 @@
                                 const fileName = `${type}_${Date.now()}_${imageIndex++}.${ext}`;
                                 filePath = `${groupId}/${type}/${fileName}`;
 
-                                formData.append('new_images', blob, filePath);
+                                formData.append('new_images', blob, fileName);
                                 node.setAttribute('src', `${API_BASE_URL}/activity/${filePath}`);
                                 node.setAttribute('data-original-file', filePath);
                             }
@@ -616,7 +642,7 @@
                         const fileName = `laxian_${Date.now()}_${imageIndex++}.${ext}`;
                         filePath = `${groupId}/laxian/${fileName}`;
 
-                        formData.append('new_images', blob, filePath);
+                        formData.append('new_images', blob, fileName);
                         laxianImg.setAttribute('data-original-file', filePath);
                         usedFilePaths.add(filePath);
                     } else if (laxianImg.hasAttribute('data-original-file')) {
