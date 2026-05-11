@@ -191,7 +191,7 @@
                 }
             }
         });
-        
+
         function toggleSection(containerId, headerElement) {
             const container = document.getElementById(containerId);
             container.classList.toggle('hidden');
@@ -555,13 +555,32 @@
                                 const byteCharacters = atob(base64Data);
                                 const byteNumbers = new Array(byteCharacters.length);
                                 for (let j = 0; j < byteCharacters.length; j++) byteNumbers[j] = byteCharacters.charCodeAt(j);
-                                const blob = new Blob([new Uint8Array(byteNumbers)], { type: mimeType });
 
-                                const ext = mimeType === 'image/jpeg' ? 'jpg' : (mimeType.split('/')[1] || 'png');
+                                // 强制指定标准 fallback 后缀，防止 iOS 提取出奇怪的格式
+                                let ext = 'jpg';
+                                if (mimeType.includes('png')) ext = 'png';
+                                else if (mimeType.includes('gif')) ext = 'gif';
+                                else if (mimeType.includes('webp')) ext = 'webp';
+
+                                // 生成标准文件名
                                 const fileName = `${type}_${Date.now()}_${imageIndex++}.${ext}`;
                                 filePath = `${groupId}/${type}/${fileName}`;
 
-                                formData.append('new_images', blob, fileName);
+                                // 💡 终极绝招：利用 File 构造函数代替纯 Blob。
+                                // 大多数手机端 WebKit 内核会忽略 Blob 的第三个 filename 参数，
+                                // 但如果直接传一个真正的 File 对象，浏览器就绝对不敢强行重命名它！
+                                const uint8Array = new Uint8Array(byteNumbers);
+                                let imageFileObj;
+                                try {
+                                    imageFileObj = new File([uint8Array], fileName, { type: mimeType });
+                                } catch (e) {
+                                    // 兼容极低版本不支持 File 构造函数的移动端浏览器
+                                    imageFileObj = new Blob([uint8Array], { type: mimeType });
+                                }
+
+                                // 这里依然传入 fileName 作为双重保险
+                                formData.append('new_images', imageFileObj, fileName);
+
                                 node.setAttribute('src', `${API_BASE_URL}/activity/${filePath}`);
                                 node.setAttribute('data-original-file', filePath);
                             }
