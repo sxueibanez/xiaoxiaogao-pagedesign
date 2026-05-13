@@ -146,7 +146,8 @@
     </div>
 
     <input type="file" id="import-file" accept=".json" class="hidden" onchange="handleFileSelect(event)">
-    <input type="file" id="image-upload" accept="image/*" class="hidden" onchange="handleImageUpload(event)">
+    <input type="file" id="image-upload" accept="image/jpeg, image/png, image/gif, image/webp" class="hidden"
+        onchange="handleImageUpload(event)">
     <input type="file" id="laxian-upload" accept="image/gif, image/jpeg, image/png, image/webp" class="hidden"
         onchange="handleLaxianUpload(event)">
 
@@ -180,7 +181,7 @@
                 const items = (e.clipboardData || e.originalEvent.clipboardData).items;
                 for (let i = 0; i < items.length; i++) {
                     if (items[i].type.indexOf("image") !== -1) {
-                        e.preventDefault(); 
+                        e.preventDefault();
                         const file = items[i].getAsFile();
                         const reader = new FileReader();
                         reader.onload = function (event) {
@@ -192,7 +193,7 @@
                 }
             }
         });
-        
+
         function toggleSection(containerId, headerElement) {
             const container = document.getElementById(containerId);
             container.classList.toggle('hidden');
@@ -550,15 +551,8 @@
 
                             // 💡 终极移动端防线：强制转为合规的 File 对象并严格兜底后缀
                             if (srcAttr && srcAttr.startsWith('data:image')) {
-                                const parts = srcAttr.split(',');
-                                const mimeType = parts[0].match(/:(.*?);/)[1];
-                                const base64Data = parts[1];
-                                const byteCharacters = atob(base64Data);
-                                const byteNumbers = new Array(byteCharacters.length);
-                                for (let j = 0; j < byteCharacters.length; j++) byteNumbers[j] = byteCharacters.charCodeAt(j);
-                                
-                                // 强制清洗不规范扩展名
-                                let ext = 'jpg'; 
+                                const mimeType = srcAttr.substring(5, srcAttr.indexOf(';'));
+                                let ext = 'jpg';
                                 if (mimeType.includes('png')) ext = 'png';
                                 else if (mimeType.includes('gif')) ext = 'gif';
                                 else if (mimeType.includes('webp')) ext = 'webp';
@@ -566,13 +560,15 @@
                                 const fileName = `${type}_${Date.now()}_${imageIndex++}.${ext}`;
                                 filePath = `${groupId}/${type}/${fileName}`;
 
-                                // 强制传入真正的 File 实例，无视 WebKit 的恶意重命名机制
-                                const uint8Array = new Uint8Array(byteNumbers);
+                                // 直接 fetch 读取 DataURL，完美避开 JS 堆内存爆炸
+                                const res = await fetch(srcAttr);
+                                const imageBlob = await res.blob();
+
                                 let imageFileObj;
                                 try {
-                                    imageFileObj = new File([uint8Array], fileName, { type: mimeType });
+                                    imageFileObj = new File([imageBlob], fileName, { type: mimeType });
                                 } catch (e) {
-                                    imageFileObj = new Blob([uint8Array], { type: mimeType });
+                                    imageFileObj = imageBlob; // 移动端直接传递纯净的 Blob 实例兜底
                                 }
 
                                 // 传入最纯净的 fileName，抹平双端解析斜杠差异
@@ -645,13 +641,7 @@
                     const srcAttr = laxianImg.getAttribute('src');
                     let filePath = "";
                     if (srcAttr.startsWith('data:image')) {
-                        const parts = srcAttr.split(',');
-                        const mimeType = parts[0].match(/:(.*?);/)[1];
-                        const base64Data = parts[1];
-                        const byteCharacters = atob(base64Data);
-                        const byteNumbers = new Array(byteCharacters.length);
-                        for (let j = 0; j < byteCharacters.length; j++) byteNumbers[j] = byteCharacters.charCodeAt(j);
-                        
+                        const mimeType = srcAttr.substring(5, srcAttr.indexOf(';'));
                         let ext = 'gif';
                         if (mimeType.includes('jpg') || mimeType.includes('jpeg')) ext = 'jpg';
                         else if (mimeType.includes('png')) ext = 'png';
@@ -660,13 +650,14 @@
                         const fileName = `laxian_${Date.now()}_${imageIndex++}.${ext}`;
                         filePath = `${groupId}/laxian/${fileName}`;
 
-                        // 同步升级拉线图片的打包防御
-                        const uint8Array = new Uint8Array(byteNumbers);
+                        const res = await fetch(srcAttr);
+                        const imageBlob = await res.blob();
+
                         let imageFileObj;
                         try {
-                            imageFileObj = new File([uint8Array], fileName, { type: mimeType });
+                            imageFileObj = new File([imageBlob], fileName, { type: mimeType });
                         } catch (e) {
-                            imageFileObj = new Blob([uint8Array], { type: mimeType });
+                            imageFileObj = imageBlob;
                         }
 
                         formData.append('new_images', imageFileObj, fileName);
