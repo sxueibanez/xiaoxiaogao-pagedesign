@@ -566,14 +566,20 @@
                                 const res = await fetch(srcAttr);
                                 const imageBlob = await res.blob();
 
+                                // 确保 mimeType 绝对不为空，防止 iOS 构造 File 失败
+                                const safeMimeType = mimeType || 'image/jpeg';
                                 let imageFileObj;
+
                                 try {
-                                    imageFileObj = new File([imageBlob], fileName, { type: mimeType });
+                                    imageFileObj = new File([imageBlob], fileName, { type: safeMimeType });
                                 } catch (e) {
-                                    imageFileObj = imageBlob; // 移动端直接传递纯净的 Blob 实例兜底
+                                    // 🚀 针对老旧 iOS 内核的终极黑科技兼容：
+                                    // 强制为 blob 手动注入静态只读的 name 属性，防止 FormData 合并同名 Blob
+                                    imageFileObj = imageBlob;
+                                    imageFileObj.name = fileName;
                                 }
 
-                                // 传入最纯净的 fileName，抹平双端解析斜杠差异
+                                // 传入最纯净的 fileName，双重保险固定文件名
                                 formData.append('new_images', imageFileObj, fileName);
                                 node.setAttribute('src', `${API_BASE_URL}/activity/${filePath}`);
                                 node.setAttribute('data-original-file', filePath);
