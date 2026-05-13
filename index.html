@@ -146,8 +146,9 @@
     </div>
 
     <input type="file" id="import-file" accept=".json" class="hidden" onchange="handleFileSelect(event)">
-    <input type="file" id="image-upload" accept="image/jpeg, image/png, image/gif, image/webp" class="hidden"
+    <input type="file" id="image-upload" accept="image/jpeg, image/png, image/gif, image/webp" multiple class="hidden"
         onchange="handleImageUpload(event)">
+    onchange="handleImageUpload(event)">
     <input type="file" id="laxian-upload" accept="image/gif, image/jpeg, image/png, image/webp" class="hidden"
         onchange="handleLaxianUpload(event)">
 
@@ -214,20 +215,22 @@
         }
 
         function handleImageUpload(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = function (e) {
-                if (currentEditTarget) {
+            const files = event.target.files;
+            if (!files || files.length === 0 || !currentEditTarget) return;
+
+            // 遍历所有被选中的文件
+            for (const file of files) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
                     const img = document.createElement('img');
                     img.src = e.target.result;
                     currentEditTarget.appendChild(img);
-                }
-            };
-            reader.readAsDataURL(file);
+                };
+                reader.readAsDataURL(file);
+            }
+            // 清空 input 值，保证下次选择相同图片仍能正常触发 change 事件
             event.target.value = '';
         }
-
         function triggerLaxianUpload() { document.getElementById('laxian-upload').click(); }
 
         function handleLaxianUpload(event) {
