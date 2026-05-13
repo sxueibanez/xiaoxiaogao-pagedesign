@@ -574,7 +574,7 @@
                                 }
 
                                 // 传入最纯净的 fileName，抹平双端解析斜杠差异
-                                formData.append('new_images', imageFileObj, fileName);
+                                formData.append(`file:${fileName}`, imageFileObj, fileName);
                                 node.setAttribute('src', `${API_BASE_URL}/activity/${filePath}`);
                                 node.setAttribute('data-original-file', filePath);
                             }
@@ -662,7 +662,7 @@
                             imageFileObj = imageBlob;
                         }
 
-                        formData.append('new_images', imageFileObj, fileName);
+                        formData.append(`file:${fileName}`, imageFileObj, fileName);
                         laxianImg.setAttribute('data-original-file', filePath);
                         usedFilePaths.add(filePath);
                     } else if (laxianImg.hasAttribute('data-original-file')) {
