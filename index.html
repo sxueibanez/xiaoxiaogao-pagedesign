@@ -179,7 +179,7 @@
 
         document.addEventListener('mousedown', function (e) {
             const handle = e.target.closest('.drag-handle');
-            if (handle && !e.target.closest('button')) {
+            if (handle && !e.target.closest('button') && !e.target.closest('.collapse-arrow')) {
                 const item = handle.closest('.phrase-item');
                 if (item) item.setAttribute('draggable', 'true');
             }
@@ -196,7 +196,7 @@
 
         document.addEventListener('touchstart', function (e) {
             const handle = e.target.closest('.drag-handle');
-            if (handle && !e.target.closest('button')) {
+            if (handle && !e.target.closest('button') && !e.target.closest('.collapse-arrow')) {
                 const item = handle.closest('.phrase-item');
                 if (item) {
                     touchDragSrcEl = item;
@@ -296,6 +296,15 @@
             }
         });
 
+        function toggleItemContent(btnElement) {
+            const item = btnElement.closest('.phrase-item, .command-item, .text-item');
+            if (item) {
+                const content = item.querySelector('.p-4');
+                if (content) content.classList.toggle('hidden');
+                btnElement.classList.toggle('-rotate-90');
+            }
+        }
+
         function toggleSection(containerId, headerElement) {
             const container = document.getElementById(containerId);
             container.classList.toggle('hidden');
@@ -388,9 +397,10 @@
             const html = `
                 <div class="phrase-item border-[3px] border-black bg-white/40 group transition-all duration-200">
                     <div class="drag-handle flex justify-between items-center border-b-[3px] border-black px-3 py-1.5 bg-[#e6f4e8] cursor-move" title="按住此处拖拽排序">
-                        <div class="flex items-center gap-2 pointer-events-none">
-                            <span class="font-black text-base phrase-index">${index}.</span>
-                            <span class="text-xs text-gray-500 font-bold">按住此处拖拽排序</span>
+                        <div class="flex items-center gap-2">
+                            <span class="collapse-arrow inline-block transition-transform duration-200 text-sm cursor-pointer px-1 hover:text-gray-500" onclick="toggleItemContent(this)" title="展开/收起">▼</span>
+                            <span class="font-black text-base phrase-index pointer-events-none">${index}.</span>
+                            <span class="text-xs text-gray-500 font-bold pointer-events-none">按住此处拖拽排序</span>
                         </div>
                         <button onclick="deleteItem(this, 'phrase')" title="删除此项" class="border-[2px] border-black w-7 h-7 flex items-center justify-center font-black text-sm bg-white hover:bg-red-500 hover:text-white transition-colors cursor-pointer shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-y-0.5 active:translate-x-0.5">X</button>
                     </div>
@@ -407,7 +417,8 @@
             const html = `
                 <div class="command-item border-[3px] border-black bg-white/40 group">
                     <div class="flex justify-between items-center border-b-[3px] border-black px-3 py-1 bg-[#e6f4e8]">
-                        <div class="w-2/3 font-bold flex items-center">
+                        <div class="w-2/3 font-bold flex items-center gap-2">
+                            <span class="collapse-arrow inline-block transition-transform duration-200 text-sm cursor-pointer px-1 hover:text-gray-500" onclick="toggleItemContent(this)" title="展开/收起">▼</span>
                             <div class="focus:outline-none empty:before:content-[attr(placeholder)] empty:before:text-gray-500 cursor-text w-full outline-none py-1" contenteditable="true" placeholder="触发词：">${trigger}</div>
                         </div>
                         <button onclick="deleteItem(this, 'command')" title="删除此项" class="border-[2px] border-black w-7 h-7 flex items-center justify-center font-black text-sm bg-white hover:bg-red-500 hover:text-white transition-colors cursor-pointer shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-y-0.5 active:translate-x-0.5">X</button>
@@ -427,7 +438,10 @@
             const html = `
                 <div class="text-item border-[3px] border-black bg-white/40 group">
                     <div class="flex justify-between items-center border-b-[3px] border-black px-3 py-1.5 bg-[#e6f4e8]">
-                        <span class="font-black text-base item-index">${index}.</span>
+                        <div class="flex items-center gap-2">
+                            <span class="collapse-arrow inline-block transition-transform duration-200 text-sm cursor-pointer px-1 hover:text-gray-500" onclick="toggleItemContent(this)" title="展开/收起">▼</span>
+                            <span class="font-black text-base item-index">${index}.</span>
+                        </div>
                         <button onclick="deleteTextItem(this)" title="删除此项" class="border-[2px] border-black w-7 h-7 flex items-center justify-center font-black text-sm bg-white hover:bg-red-500 hover:text-white transition-colors cursor-pointer shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-y-0.5 active:translate-x-0.5">X</button>
                     </div>
                     <div class="p-4 font-bold relative">
