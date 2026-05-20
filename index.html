@@ -169,6 +169,23 @@
         let initialFilePaths = new Set();
         let usedFilePaths = new Set();
         let currentEditTarget = null;
+        let lastKnownRange = null;
+        let savedRange = null;
+
+        // 监听选区变化，实时保存最后一次的光标位置
+        document.addEventListener('selectionchange', () => {
+            const sel = window.getSelection();
+            if (sel.rangeCount > 0) {
+                const range = sel.getRangeAt(0);
+                let container = range.commonAncestorContainer;
+                if (container.nodeType === Node.TEXT_NODE) {
+                    container = container.parentElement;
+                }
+                if (container && container.closest && container.closest('[contenteditable="true"]')) {
+                    lastKnownRange = range.cloneRange();
+                }
+            }
+        });
 
         // 全局拖拽排序逻辑 (用于短句列表)
         let dragSrcEl = null;
@@ -317,30 +334,64 @@
 
         function triggerImageUpload(btnElement) {
             currentEditTarget = btnElement.previousElementSibling;
+            
+            // 检查保存的光标是否在当前输入框内
+            if (lastKnownRange && currentEditTarget.contains(lastKnownRange.commonAncestorContainer)) {
+                savedRange = lastKnownRange.cloneRange();
+            } else {
+                savedRange = null;
+            }
+            
             document.getElementById('image-upload').click();
         }
 
-        function handleImageUpload(event) {
+        async function handleImageUpload(event) {
             const files = event.target.files;
             if (!files || files.length === 0 || !currentEditTarget) return;
 
-            let loadedCount = 0;
-            // 遍历所有被选中的文件
-            for (const file of files) {
-                const reader = new FileReader();
-                reader.onload = function (e) {
-                    const img = document.createElement('img');
-                    img.src = e.target.result;
-                    currentEditTarget.appendChild(img);
-                    
-                    loadedCount++;
-                    if (loadedCount === files.length) {
-                        currentEditTarget.appendChild(document.createElement('br'));
-                        currentEditTarget.appendChild(document.createElement('br'));
-                    }
-                };
-                reader.readAsDataURL(file);
+            // 如果没有有效的光标位置，默认插入到末尾
+            if (!savedRange) {
+                savedRange = document.createRange();
+                savedRange.selectNodeContents(currentEditTarget);
+                savedRange.collapse(false);
             }
+
+            savedRange.deleteContents();
+
+            // 保证多图片上传时的顺序
+            const promises = Array.from(files).map(file => {
+                return new Promise(resolve => {
+                    const reader = new FileReader();
+                    reader.onload = e => resolve(e.target.result);
+                    reader.readAsDataURL(file);
+                });
+            });
+
+            const results = await Promise.all(promises);
+            const frag = document.createDocumentFragment();
+
+            results.forEach((src, idx) => {
+                const img = document.createElement('img');
+                img.src = src;
+                frag.appendChild(img);
+
+                if (idx === results.length - 1) {
+                    frag.appendChild(document.createElement('br'));
+                    frag.appendChild(document.createElement('br'));
+                }
+            });
+
+            savedRange.insertNode(frag);
+
+            // 恢复光标位置到图片之后
+            currentEditTarget.focus();
+            savedRange.collapse(false);
+            const sel = window.getSelection();
+            sel.removeAllRanges();
+            sel.addRange(savedRange);
+
+            currentEditTarget = null;
+            savedRange = null;
             // 清空 input 值，保证下次选择相同图片仍能正常触发 change 事件
             event.target.value = '';
         }
