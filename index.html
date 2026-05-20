@@ -136,16 +136,12 @@
         </div>
 
         <div class="mt-16 flex flex-col sm:flex-row justify-center gap-6">
-            <button onclick="importData()"
-                class="border-[4px] border-black bg-[#e6f4e8] text-black px-12 py-4 text-2xl font-bold tracking-widest hover:bg-[#b5e0bb] transition-all cursor-pointer shadow-[8px_8px_0px_0px_rgba(0,0,0,0.2)] active:shadow-none active:translate-y-2 active:translate-x-2">导入
-                JSON</button>
             <button onclick="submitData()"
                 class="border-[4px] border-black bg-black text-white px-12 py-4 text-2xl font-bold tracking-widest hover:bg-gray-800 transition-all cursor-pointer shadow-[8px_8px_0px_0px_rgba(0,0,0,0.2)] active:shadow-none active:translate-y-2 active:translate-x-2">保存提交</button>
         </div>
 
     </div>
 
-    <input type="file" id="import-file" accept=".json" class="hidden" onchange="handleFileSelect(event)">
     <input type="file" id="image-upload" accept="image/jpeg, image/png, image/gif, image/webp" multiple class="hidden"
         onchange="handleImageUpload(event)">
     <input type="file" id="laxian-upload" accept="image/gif, image/jpeg, image/png, image/webp" class="hidden"
@@ -398,13 +394,13 @@
                 <div class="phrase-item border-[3px] border-black bg-white/40 group transition-all duration-200">
                     <div class="drag-handle flex justify-between items-center border-b-[3px] border-black px-3 py-1.5 bg-[#e6f4e8] cursor-move" title="按住此处拖拽排序">
                         <div class="flex items-center gap-2">
-                            <span class="collapse-arrow inline-block transition-transform duration-200 text-sm cursor-pointer px-1 hover:text-gray-500" onclick="toggleItemContent(this)" title="展开/收起">▼</span>
+                            <span class="collapse-arrow inline-block transition-transform duration-200 text-sm cursor-pointer px-1 hover:text-gray-500 -rotate-90" onclick="toggleItemContent(this)" title="展开/收起">▼</span>
                             <span class="font-black text-base phrase-index pointer-events-none">${index}.</span>
                             <span class="text-xs text-gray-500 font-bold pointer-events-none">按住此处拖拽排序</span>
                         </div>
                         <button onclick="deleteItem(this, 'phrase')" title="删除此项" class="border-[2px] border-black w-7 h-7 flex items-center justify-center font-black text-sm bg-white hover:bg-red-500 hover:text-white transition-colors cursor-pointer shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-y-0.5 active:translate-x-0.5">X</button>
                     </div>
-                    <div class="p-4 min-h-[120px] font-bold relative group">
+                    <div class="p-4 min-h-[120px] font-bold relative group hidden">
                         <div class="focus:outline-none empty:before:content-[attr(placeholder)] empty:before:text-gray-400 cursor-text w-full h-full min-h-[80px] pb-8 outline-none" contenteditable="true" placeholder="可以添加任何文字和图片">${content}</div>
                         <button onclick="triggerImageUpload(this)" title="插入图片" class="absolute bottom-2 right-2 border-[2px] border-black px-2 py-1 text-xs bg-[#e6f4e8] hover:bg-[#b5e0bb] cursor-pointer transition-colors shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-y-0.5 active:translate-x-0.5">🖼️ 插入图片</button>
                     </div>
@@ -418,12 +414,12 @@
                 <div class="command-item border-[3px] border-black bg-white/40 group">
                     <div class="flex justify-between items-center border-b-[3px] border-black px-3 py-1 bg-[#e6f4e8]">
                         <div class="w-2/3 font-bold flex items-center gap-2">
-                            <span class="collapse-arrow inline-block transition-transform duration-200 text-sm cursor-pointer px-1 hover:text-gray-500" onclick="toggleItemContent(this)" title="展开/收起">▼</span>
+                            <span class="collapse-arrow inline-block transition-transform duration-200 text-sm cursor-pointer px-1 hover:text-gray-500 -rotate-90" onclick="toggleItemContent(this)" title="展开/收起">▼</span>
                             <div class="focus:outline-none empty:before:content-[attr(placeholder)] empty:before:text-gray-500 cursor-text w-full outline-none py-1" contenteditable="true" placeholder="触发词：">${trigger}</div>
                         </div>
                         <button onclick="deleteItem(this, 'command')" title="删除此项" class="border-[2px] border-black w-7 h-7 flex items-center justify-center font-black text-sm bg-white hover:bg-red-500 hover:text-white transition-colors cursor-pointer shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-y-0.5 active:translate-x-0.5">X</button>
                     </div>
-                    <div class="p-4 min-h-[120px] font-bold relative group">
+                    <div class="p-4 min-h-[120px] font-bold relative group hidden">
                         <div class="focus:outline-none empty:before:content-[attr(placeholder)] empty:before:text-gray-400 cursor-text w-full h-full min-h-[80px] pb-8 outline-none" contenteditable="true" placeholder="可以添加任何文字和图片">${content}</div>
                         <button onclick="triggerImageUpload(this)" title="插入图片" class="absolute bottom-2 right-2 border-[2px] border-black px-2 py-1 text-xs bg-[#e6f4e8] hover:bg-[#b5e0bb] cursor-pointer transition-colors shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-y-0.5 active:translate-x-0.5">🖼️ 插入图片</button>
                     </div>
@@ -439,12 +435,12 @@
                 <div class="text-item border-[3px] border-black bg-white/40 group">
                     <div class="flex justify-between items-center border-b-[3px] border-black px-3 py-1.5 bg-[#e6f4e8]">
                         <div class="flex items-center gap-2">
-                            <span class="collapse-arrow inline-block transition-transform duration-200 text-sm cursor-pointer px-1 hover:text-gray-500" onclick="toggleItemContent(this)" title="展开/收起">▼</span>
+                            <span class="collapse-arrow inline-block transition-transform duration-200 text-sm cursor-pointer px-1 hover:text-gray-500 -rotate-90" onclick="toggleItemContent(this)" title="展开/收起">▼</span>
                             <span class="font-black text-base item-index">${index}.</span>
                         </div>
                         <button onclick="deleteTextItem(this)" title="删除此项" class="border-[2px] border-black w-7 h-7 flex items-center justify-center font-black text-sm bg-white hover:bg-red-500 hover:text-white transition-colors cursor-pointer shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-y-0.5 active:translate-x-0.5">X</button>
                     </div>
-                    <div class="p-4 font-bold relative">
+                    <div class="p-4 font-bold relative hidden">
                         <textarea class="w-full min-h-[80px] bg-transparent outline-none resize-y font-bold" placeholder="${placeholder}">${displayContent}</textarea>
                     </div>
                 </div>`;
@@ -611,30 +607,6 @@
                 console.error(error);
                 showMessage('拉取失败，请检查小小糕的隧道是否在线。');
             }
-        }
-
-        function importData() { document.getElementById('import-file').click(); }
-
-        function handleFileSelect(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = async function (e) {
-                try {
-                    const data = JSON.parse(e.target.result);
-                    const filename = file.name;
-                    if (filename.endsWith('.json')) {
-                        document.getElementById('group-id-input').value = filename.replace('.json', '');
-                    }
-                    await loadDataToUI(data);
-                    showMessage('导入成功！\n已记录当前图片状态以便删除管理。');
-                } catch (err) {
-                    showMessage('JSON 文件解析失败。');
-                    console.error(err);
-                }
-            };
-            reader.readAsText(file);
-            event.target.value = '';
         }
 
         function extractTextArray(containerId) {
