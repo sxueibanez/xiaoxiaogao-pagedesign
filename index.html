@@ -217,6 +217,7 @@
             const files = event.target.files;
             if (!files || files.length === 0 || !currentEditTarget) return;
 
+            let loadedCount = 0;
             // 遍历所有被选中的文件
             for (const file of files) {
                 const reader = new FileReader();
@@ -224,6 +225,12 @@
                     const img = document.createElement('img');
                     img.src = e.target.result;
                     currentEditTarget.appendChild(img);
+                    
+                    loadedCount++;
+                    if (loadedCount === files.length) {
+                        currentEditTarget.appendChild(document.createElement('br'));
+                        currentEditTarget.appendChild(document.createElement('br'));
+                    }
                 };
                 reader.readAsDataURL(file);
             }
@@ -311,6 +318,7 @@
         function addTextItem(containerId, content = '', placeholder = '') {
             const container = document.getElementById(containerId);
             const index = container.children.length + 1;
+            const displayContent = content ? content.replace(/\n*$/, '') + '\n\n' : '';
             const html = `
                 <div class="text-item border-[3px] border-black bg-white/40 group">
                     <div class="flex justify-between items-center border-b-[3px] border-black px-3 py-1.5 bg-[#e6f4e8]">
@@ -318,7 +326,7 @@
                         <button onclick="deleteTextItem(this)" title="删除此项" class="border-[2px] border-black w-7 h-7 flex items-center justify-center font-black text-sm bg-white hover:bg-red-500 hover:text-white transition-colors cursor-pointer shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-y-0.5 active:translate-x-0.5">X</button>
                     </div>
                     <div class="p-4 font-bold relative">
-                        <textarea class="w-full min-h-[80px] bg-transparent outline-none resize-y font-bold" placeholder="${placeholder}">${content}</textarea>
+                        <textarea class="w-full min-h-[80px] bg-transparent outline-none resize-y font-bold" placeholder="${placeholder}">${displayContent}</textarea>
                     </div>
                 </div>`;
             container.insertAdjacentHTML('beforeend', html);
@@ -442,6 +450,9 @@
                     html += `<img src="${API_BASE_URL}/activity/${seg.file}" data-original-file="${seg.file}">`;
                 }
             });
+            if (html !== '') {
+                html += '<br><br>';
+            }
             return html;
         }
 
