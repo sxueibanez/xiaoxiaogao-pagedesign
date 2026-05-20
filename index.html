@@ -191,6 +191,54 @@
             });
         });
 
+        // 移动端 Touch 拖拽支持
+        let touchDragSrcEl = null;
+
+        document.addEventListener('touchstart', function (e) {
+            const handle = e.target.closest('.drag-handle');
+            if (handle && !e.target.closest('button')) {
+                const item = handle.closest('.phrase-item');
+                if (item) {
+                    touchDragSrcEl = item;
+                    setTimeout(() => item.classList.add('opacity-40', 'scale-[0.98]'), 0);
+                }
+            }
+        }, { passive: false });
+
+        document.addEventListener('touchmove', function (e) {
+            if (!touchDragSrcEl) return;
+            e.preventDefault(); // 防止拖拽时页面跟着滚动
+
+            const touch = e.touches[0];
+            const targetEl = document.elementFromPoint(touch.clientX, touch.clientY);
+            if (!targetEl) return;
+
+            const targetItem = targetEl.closest('.phrase-item');
+            if (targetItem && targetItem !== touchDragSrcEl && touchDragSrcEl.parentNode.contains(targetItem)) {
+                const rect = targetItem.getBoundingClientRect();
+                const next = (touch.clientY - rect.top) / (rect.bottom - rect.top) > 0.5;
+                const container = touchDragSrcEl.parentNode;
+                container.insertBefore(touchDragSrcEl, next ? targetItem.nextSibling : targetItem);
+                
+                const indices = container.querySelectorAll('.phrase-index');
+                indices.forEach((el, idx) => { el.innerText = (idx + 1) + '.'; });
+            }
+        }, { passive: false });
+
+        document.addEventListener('touchend', function (e) {
+            if (touchDragSrcEl) {
+                touchDragSrcEl.classList.remove('opacity-40', 'scale-[0.98]');
+                touchDragSrcEl = null;
+            }
+        });
+
+        document.addEventListener('touchcancel', function (e) {
+            if (touchDragSrcEl) {
+                touchDragSrcEl.classList.remove('opacity-40', 'scale-[0.98]');
+                touchDragSrcEl = null;
+            }
+        });
+
         document.addEventListener('DOMContentLoaded', () => {
             const phrasesContainer = document.getElementById('phrases-container');
 
