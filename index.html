@@ -174,6 +174,60 @@
         let usedFilePaths = new Set();
         let currentEditTarget = null;
 
+        // 全局拖拽排序逻辑 (用于短句列表)
+        let dragSrcEl = null;
+
+        document.addEventListener('mousedown', function (e) {
+            const handle = e.target.closest('.drag-handle');
+            if (handle && !e.target.closest('button')) {
+                const item = handle.closest('.phrase-item');
+                if (item) item.setAttribute('draggable', 'true');
+            }
+        });
+
+        document.addEventListener('mouseup', function (e) {
+            document.querySelectorAll('.phrase-item[draggable="true"]').forEach(item => {
+                item.setAttribute('draggable', 'false');
+            });
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const phrasesContainer = document.getElementById('phrases-container');
+
+            phrasesContainer.addEventListener('dragstart', function (e) {
+                const item = e.target.closest('.phrase-item');
+                if (item) {
+                    dragSrcEl = item;
+                    e.dataTransfer.effectAllowed = 'move';
+                    e.dataTransfer.setData('text/plain', '');
+                    setTimeout(() => item.classList.add('opacity-40', 'scale-[0.98]'), 0);
+                }
+            });
+
+            phrasesContainer.addEventListener('dragover', function (e) {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                
+                const targetItem = e.target.closest('.phrase-item');
+                if (targetItem && targetItem !== dragSrcEl) {
+                    const rect = targetItem.getBoundingClientRect();
+                    const next = (e.clientY - rect.top) / (rect.bottom - rect.top) > 0.5;
+                    phrasesContainer.insertBefore(dragSrcEl, next ? targetItem.nextSibling : targetItem);
+                    
+                    const indices = phrasesContainer.querySelectorAll('.phrase-index');
+                    indices.forEach((el, idx) => { el.innerText = (idx + 1) + '.'; });
+                }
+            });
+
+            phrasesContainer.addEventListener('dragend', function (e) {
+                if (dragSrcEl) {
+                    dragSrcEl.classList.remove('opacity-40', 'scale-[0.98]');
+                    dragSrcEl.setAttribute('draggable', 'false');
+                    dragSrcEl = null;
+                }
+            });
+        });
+
         // 全局富文本输入框粘贴事件接管（完美捕获图片流）
         document.addEventListener('paste', function (e) {
             const target = e.target;
@@ -284,9 +338,12 @@
             const container = document.getElementById('phrases-container');
             const index = container.children.length + 1;
             const html = `
-                <div class="phrase-item border-[3px] border-black bg-white/40 group">
-                    <div class="flex justify-between items-center border-b-[3px] border-black px-3 py-1.5 bg-[#e6f4e8]">
-                        <span class="font-black text-base phrase-index">${index}.</span>
+                <div class="phrase-item border-[3px] border-black bg-white/40 group transition-all duration-200">
+                    <div class="drag-handle flex justify-between items-center border-b-[3px] border-black px-3 py-1.5 bg-[#e6f4e8] cursor-move" title="按住此处拖拽排序">
+                        <div class="flex items-center gap-2 pointer-events-none">
+                            <span class="font-black text-base phrase-index">${index}.</span>
+                            <span class="text-xs text-gray-500 font-bold">按住此处拖拽排序</span>
+                        </div>
                         <button onclick="deleteItem(this, 'phrase')" title="删除此项" class="border-[2px] border-black w-7 h-7 flex items-center justify-center font-black text-sm bg-white hover:bg-red-500 hover:text-white transition-colors cursor-pointer shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-y-0.5 active:translate-x-0.5">X</button>
                     </div>
                     <div class="p-4 min-h-[120px] font-bold relative group">
