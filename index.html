@@ -32,14 +32,10 @@
 
         <div class="mb-12 border-[4px] border-black flex flex-col sm:flex-row items-center p-4 bg-[#e6f4e8] gap-4">
             <div class="flex items-center w-full">
-                <span class="font-bold text-2xl mr-2 whitespace-nowrap">群号：</span>
-                <input type="text" id="group-id-input" placeholder="请输入群号..."
-                    class="w-full text-2xl font-bold outline-none placeholder-gray-400 bg-transparent min-w-[50px]">
+                <span class="font-bold text-2xl mr-2 whitespace-nowrap text-gray-800">当前管理群号：</span>
+                <input type="text" id="group-id-input" readonly placeholder="未绑定群号"
+                    class="w-full text-2xl font-black outline-none bg-transparent text-gray-700 cursor-default select-none tracking-wide">
             </div>
-            <button onclick="fetchServerData()"
-                class="w-full sm:w-auto shrink-0 border-[3px] border-black px-6 py-2 font-bold bg-white/10 backdrop-blur-sm hover:bg-[#a8cca9] transition-colors whitespace-nowrap shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-y-1 active:translate-x-1">
-                拉取现有配置
-            </button>
         </div>
 
         <p class="text-center font-bold text-red-500 mb-8 tracking-wider">目前不支持苹果用户上传图片</p>
@@ -157,11 +153,25 @@
         </div>
     </div>
 
+    <div id="verify-modal" class="hidden fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 backdrop-blur-sm">
+        <div class="bg-white border-[4px] border-black p-8 max-w-sm w-full mx-4 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+            <h3 class="text-2xl font-black mb-2 text-center tracking-wider">🔒 安全身份验证</h3>
+            <p class="text-xs font-bold text-gray-500 mb-6 text-center">请输入机器人私聊发送给您的专属身份验证码</p>
+            <div class="mb-6">
+                <input type="text" id="verify-code-input" placeholder="请输入验证码..." maxlength="10"
+                    class="w-full border-[3px] border-black p-3 text-center text-2xl font-black tracking-widest outline-none focus:bg-[#e6f4e8] transition-colors uppercase">
+            </div>
+            <button onclick="submitVerifyCode()"
+                class="w-full border-[3px] border-black bg-[#e6f4e8] p-3 font-bold hover:bg-[#b5e0bb] transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-y-1 active:translate-x-1 text-lg">
+                校验并进入系统
+            </button>
+        </div>
+    </div>
+
     <script>
         const API_BASE_URL = "https://api.xiaoxiaogao.xyz";
         let currentToken = "";
 
-        // 全局初始数据，保留完整字段结构
         let globalOriginalData = {
             "mode": "pro", "super_admins": [], "kefus": [], "online_kefus": [],
             "preset_lines": [], "custom_commands": {}, "paimian_lines": [],
@@ -174,7 +184,6 @@
         let lastKnownRange = null;
         let savedRange = null;
 
-        // 监听选区变化，实时保存最后一次的光标位置
         document.addEventListener('selectionchange', () => {
             const sel = window.getSelection();
             if (sel.rangeCount > 0) {
@@ -189,7 +198,6 @@
             }
         });
 
-        // 全局拖拽排序逻辑 (用于短句列表)
         let dragSrcEl = null;
 
         document.addEventListener('mousedown', function (e) {
@@ -206,7 +214,6 @@
             });
         });
 
-        // 移动端 Touch 拖拽支持
         let touchDragSrcEl = null;
 
         document.addEventListener('touchstart', function (e) {
@@ -222,7 +229,7 @@
 
         document.addEventListener('touchmove', function (e) {
             if (!touchDragSrcEl) return;
-            e.preventDefault(); // 防止拖拽时页面跟着滚动
+            e.preventDefault();
 
             const touch = e.touches[0];
             const targetEl = document.elementFromPoint(touch.clientX, touch.clientY);
@@ -291,7 +298,6 @@
             });
         });
 
-        // 全局富文本输入框粘贴事件接管（完美捕获图片流）
         document.addEventListener('paste', function (e) {
             const target = e.target;
             if (target.closest('[contenteditable="true"]')) {
@@ -336,14 +342,11 @@
 
         function triggerImageUpload(btnElement) {
             currentEditTarget = btnElement.previousElementSibling;
-            
-            // 检查保存的光标是否在当前输入框内
             if (lastKnownRange && currentEditTarget.contains(lastKnownRange.commonAncestorContainer)) {
                 savedRange = lastKnownRange.cloneRange();
             } else {
                 savedRange = null;
             }
-            
             document.getElementById('image-upload').click();
         }
 
@@ -351,7 +354,6 @@
             const files = event.target.files;
             if (!files || files.length === 0 || !currentEditTarget) return;
 
-            // 如果没有有效的光标位置，默认插入到末尾
             if (!savedRange) {
                 savedRange = document.createRange();
                 savedRange.selectNodeContents(currentEditTarget);
@@ -360,7 +362,6 @@
 
             savedRange.deleteContents();
 
-            // 保证多图片上传时的顺序
             const promises = Array.from(files).map(file => {
                 return new Promise(resolve => {
                     const reader = new FileReader();
@@ -385,7 +386,6 @@
 
             savedRange.insertNode(frag);
 
-            // 恢复光标位置到图片之后
             currentEditTarget.focus();
             savedRange.collapse(false);
             const sel = window.getSelection();
@@ -394,9 +394,9 @@
 
             currentEditTarget = null;
             savedRange = null;
-            // 清空 input 值，保证下次选择相同图片仍能正常触发 change 事件
             event.target.value = '';
         }
+        
         function triggerLaxianUpload() { document.getElementById('laxian-upload').click(); }
 
         function handleLaxianUpload(event) {
@@ -491,7 +491,7 @@
                             <span class="collapse-arrow inline-block transition-transform duration-200 text-sm cursor-pointer px-1 hover:text-gray-500 -rotate-90" onclick="toggleItemContent(this)" title="展开/收起">▼</span>
                             <span class="font-black text-base item-index">${index}.</span>
                         </div>
-                        <button onclick="deleteTextItem(this)" title="删除此项" class="border-[2px] border-black w-7 h-7 flex items-center justify-center font-black text-sm bg-white hover:bg-red-500 hover:text-white transition-colors cursor-pointer shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-y-0.5 active:translate-x-0.5">X</button>
+                        <button onclick="deleteTextItem(btnElement)" title="删除此项" class="border-[2px] border-black w-7 h-7 flex items-center justify-center font-black text-sm bg-white hover:bg-red-500 hover:text-white transition-colors cursor-pointer shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-y-0.5 active:translate-x-0.5">X</button>
                     </div>
                     <div class="p-4 font-bold relative hidden">
                         <textarea class="w-full min-h-[80px] bg-transparent outline-none resize-y font-bold" placeholder="${placeholder}">${displayContent}</textarea>
@@ -500,23 +500,27 @@
             container.insertAdjacentHTML('beforeend', html);
         }
 
+        // 💡 页面初始化逻辑：拦截并拦截出验证码校验框
         window.onload = function () {
             addPhrase();
             addCommand();
             addTextItem('paimian-container', '', '请输入排面模板内容 (支持多行，可用变量 名字、金额)');
-            addTextItem('huaka-container', '', '请输入划卡模板内容 (支持多行，可用变量 会员1、接待1、金额1、时间1)');
+            addTextItem('huaka-container', '', '请输入划卡模板内容 (支持多行，可用变量如 会员1、接待1、金额1、时间1)');
             addTextItem('shield-container', '', '请输入需要拦截的屏蔽词...');
 
             const urlParams = new URLSearchParams(window.location.search);
             const groupIdFromUrl = urlParams.get('group');
-
             currentToken = urlParams.get('token');
 
             if (groupIdFromUrl) {
                 document.getElementById('group-id-input').value = groupIdFromUrl;
-                setTimeout(() => {
-                    fetchServerData();
-                }, 500);
+                
+                // 💡 若带有安全 token 凭证，静默拦截并唤起双因素验证码模态窗
+                if (currentToken) {
+                    const verifyModal = document.getElementById('verify-modal');
+                    verifyModal.classList.remove('hidden');
+                    document.getElementById('verify-code-input').focus();
+                }
             }
 
             const pasteZone = document.getElementById('laxian-paste-zone');
@@ -541,6 +545,57 @@
                 });
             }
         };
+
+        // 💡 新增：处理验证码提交
+        function submitVerifyCode() {
+            const verifyCode = document.getElementById('verify-code-input').value.trim();
+            if (!verifyCode) {
+                alert('请输入身份验证码！');
+                return;
+            }
+            fetchServerData(verifyCode);
+        }
+
+        // 💡 修改：静默调用后端，携带验证码安全请求配置数据
+        async function fetchServerData(verifyCode) {
+            const groupId = document.getElementById('group-id-input').value.trim();
+            if (!groupId) return;
+
+            showMessage('正在安全验证并从服务器加载现有配置，请稍候...');
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/data/${groupId}`, {
+                    method: 'GET',
+                    headers: {
+                        'X-Token': currentToken || "",
+                        'X-Verify-Code': verifyCode || ""  // 💡 安全验证码封装进请求头
+                    }
+                });
+
+                if (response.status === 403) {
+                    showMessage('⛔ 安全认证失败！\n验证码不正确、管理链接已作废或无权访问。\n请在 QQ 群内重新发送“本群状态”获取新链接。');
+                    return;
+                }
+
+                if (response.status === 404) {
+                    // 认证成功，但为新群
+                    document.getElementById('verify-modal').classList.add('hidden');
+                    showMessage(`验证通过！\n这是一个全新的群，还没有历史配置，请直接开始创建。`);
+                    return;
+                }
+                if (!response.ok) throw new Error("网络响应错误");
+
+                const data = await response.json();
+                await loadDataToUI(data);
+
+                // 💡 验证成功，解锁并隐藏验证码窗口
+                document.getElementById('verify-modal').classList.add('hidden');
+                showMessage('验证通过！成功同步该群现有配置。');
+            } catch (error) {
+                console.error(error);
+                showMessage('同步加载失败，请检查服务器网络或隧道连接状态。');
+            }
+        }
 
         function showMessage(msg) {
             document.getElementById('message-text').innerText = msg;
@@ -618,48 +673,8 @@
                     html += `<img src="${API_BASE_URL}/activity/${seg.file}" data-original-file="${seg.file}">`;
                 }
             });
-            if (html !== '') {
-                html += '<br><br>';
-            }
+            if (html !== '') { html += '<br><br>'; }
             return html;
-        }
-
-        async function fetchServerData() {
-            const groupId = document.getElementById('group-id-input').value.trim();
-            if (!groupId) {
-                showMessage('请先输入要拉取配置的群号！');
-                return;
-            }
-
-            showMessage('正在从服务器获取当前配置，请稍候...');
-
-            try {
-                const response = await fetch(`${API_BASE_URL}/api/data/${groupId}`, {
-                    method: 'GET',
-                    headers: {
-                        'X-Token': currentToken || ""
-                    }
-                });
-
-                if (response.status === 403) {
-                    showMessage('⛔ 访问口令已失效或未授权！\n请在 QQ 群内重新发送“本群状态”获取新链接。');
-                    return;
-                }
-
-                if (response.status === 404) {
-                    showMessage(`这是个新群，还没有历史配置哦，请直接开始添加。`);
-                    return;
-                }
-                if (!response.ok) throw new Error("网络响应错误");
-
-                const data = await response.json();
-                await loadDataToUI(data);
-
-                showMessage('成功拉取该群现有配置！\n现在您可以继续修改了。');
-            } catch (error) {
-                console.error(error);
-                showMessage('拉取失败，请检查小小糕的隧道是否在线。');
-            }
         }
 
         function extractTextArray(containerId) {
@@ -667,18 +682,16 @@
             const textareas = document.querySelectorAll(`#${containerId} .text-item textarea`);
             textareas.forEach(ta => {
                 const val = ta.value.trim();
-                if (val !== '') {
-                    arr.push(val);
-                }
+                if (val !== '') { arr.push(val); }
             });
             return arr;
         }
 
         async function submitData() {
             const groupId = document.getElementById('group-id-input').value.trim();
-            if (!groupId) { showMessage('请先输入群号！'); return; }
+            if (!groupId) { showMessage('无法读取到有效的目标群号！'); return; }
 
-            showMessage('正在打包并发送数据到服务器，请稍候...');
+            showMessage('正在安全打包并加密上传数据到服务器，请稍候...');
 
             const formData = new FormData();
             formData.append('group_id', groupId);
@@ -706,7 +719,6 @@
                             const srcAttr = node.getAttribute('src');
                             let filePath = "";
 
-                            // 💡 终极移动端防线：强制转为合规的 File 对象并严格兜底后缀
                             if (srcAttr && srcAttr.startsWith('data:image')) {
                                 const mimeType = srcAttr.substring(5, srcAttr.indexOf(';'));
                                 let ext = 'jpg';
@@ -717,7 +729,6 @@
                                 const fileName = `${type}_${Date.now()}_${imageIndex++}.${ext}`;
                                 filePath = `${groupId}/${type}/${fileName}`;
 
-                                // 直接 fetch 读取 DataURL，完美避开 JS 堆内存爆炸
                                 const res = await fetch(srcAttr);
                                 const imageBlob = await res.blob();
 
@@ -725,10 +736,9 @@
                                 try {
                                     imageFileObj = new File([imageBlob], fileName, { type: mimeType });
                                 } catch (e) {
-                                    imageFileObj = imageBlob; // 移动端直接传递纯净的 Blob 实例兜底
+                                    imageFileObj = imageBlob;
                                 }
 
-                                // 传入最纯净的 fileName，抹平双端解析斜杠差异
                                 formData.append('new_images', imageFileObj, fileName);
                                 node.setAttribute('src', `${API_BASE_URL}/activity/${filePath}`);
                                 node.setAttribute('data-original-file', filePath);
@@ -754,12 +764,8 @@
                 if (currentText) segments.push({ type: "text", text: currentText });
 
                 if (segments.length > 0) {
-                    if (segments[0].type === 'text') {
-                        segments[0].text = segments[0].text.trimStart();
-                    }
-                    if (segments[segments.length - 1].type === 'text') {
-                        segments[segments.length - 1].text = segments[segments.length - 1].text.trimEnd();
-                    }
+                    if (segments[0].type === 'text') { segments[0].text = segments[0].text.trimStart(); }
+                    if (segments[segments.length - 1].type === 'text') { segments[segments.length - 1].text = segments[segments.length - 1].text.trimEnd(); }
                 }
 
                 return segments.filter(s => !(s.type === 'text' && s.text === ''));
@@ -851,7 +857,7 @@
                 });
 
                 if (response.status === 403) {
-                    showMessage("⛔ 提交失败：此安全链接已过期作废！\n为保护数据安全，请在群内重新获取。");
+                    showMessage("⛔ 提交失败：此安全链接已被消耗或已过期作废！\n请在群内重新获取。");
                     return;
                 }
 
