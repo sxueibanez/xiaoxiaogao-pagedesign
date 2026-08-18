@@ -41,6 +41,7 @@
         <div class="flex gap-3 mb-8">
             <button id="config-tab" onclick="switchPage('config')" class="border-[3px] border-black px-4 py-2 font-bold bg-[#e6f4e8]">群配置</button>
             <button id="gmk-tab" onclick="switchPage('gmk')" class="border-[3px] border-black px-4 py-2 font-bold bg-white">冠名卡管理</button>
+            <button id="settings-tab" onclick="switchPage('settings')" class="border-[3px] border-black px-4 py-2 font-bold bg-white">群设置</button>
         </div>
 
         <div id="config-page">
@@ -147,6 +148,41 @@
 
         </div>
 
+        <div id="settings-page" class="hidden space-y-10">
+            <section class="border-[3px] border-black bg-white/80 p-6">
+                <h2 class="text-xl font-black mb-2">冠名卡有效期</h2>
+                <p class="text-sm font-bold text-gray-600 mb-4">设置冠名卡保存多久；填写 0 表示永久有效。</p>
+                <label class="font-bold block mb-2" for="gmk-expire-days">有效期（天）</label>
+                <input id="gmk-expire-days" type="number" min="0" step="1" value="0" class="w-full border-[3px] border-black p-3 font-bold bg-white" required>
+            </section>
+
+            <section class="border-[3px] border-black bg-white/80 p-6">
+                <h2 class="text-xl font-black mb-2">贵宾欢迎</h2>
+                <p class="text-sm font-bold text-gray-600 mb-6">仅影响进阶版群；个人关闭贵宾欢迎、原有 4 小时冷却规则仍然生效。</p>
+
+                <label class="font-bold block mb-2" for="vip-welcome-threshold">累计消费门槛</label>
+                <input id="vip-welcome-threshold" type="number" min="0" step="1" value="2000" class="w-full border-[3px] border-black p-3 font-bold bg-white mb-6" required>
+
+                <label class="font-bold block mb-2" for="vip-welcome-message">欢迎话术</label>
+                <textarea id="vip-welcome-message" rows="4" class="w-full border-[3px] border-black p-3 font-bold bg-white resize-y" required>【贵宾专属】欢迎贵宾 {昵称}，累计消费{累计消费}元！</textarea>
+                <p class="text-sm font-bold text-gray-600 mt-2 mb-6">可用变量：<code>{昵称}</code>、<code>{累计消费}</code>。</p>
+
+                <div class="border-t-[2px] border-black pt-6">
+                    <h3 class="font-black text-lg mb-2">欢迎 GIF</h3>
+                    <p id="vip-welcome-gif-status" class="text-sm font-bold text-gray-600 mb-4">正在加载当前 GIF…</p>
+                    <div id="vip-welcome-gif-preview" class="min-h-[160px] flex items-center justify-center border-[3px] border-black bg-[#e6f4e8] p-4 mb-4"></div>
+                    <div class="flex flex-wrap gap-3">
+                        <button type="button" onclick="document.getElementById('vip-welcome-gif-upload').click()" class="border-[2px] border-black p-3 font-bold bg-white">上传 / 替换 GIF</button>
+                        <button type="button" onclick="resetVipWelcomeGif()" class="border-[2px] border-black p-3 font-bold bg-red-300">恢复默认 GIF</button>
+                    </div>
+                </div>
+            </section>
+
+            <div class="flex justify-center">
+                <button onclick="submitData()" class="border-[4px] border-black bg-black text-white px-12 py-4 text-xl font-bold tracking-widest">保存提交全部改动</button>
+            </div>
+        </div>
+
         <div id="gmk-page" class="hidden">
             <div class="border-[3px] border-black bg-[#e6f4e8] p-5 mb-6">
                 <h2 class="text-xl font-black mb-3">冠名卡管理</h2>
@@ -168,6 +204,7 @@
         onchange="handleImageUpload(event)">
     <input type="file" id="laxian-upload" accept="image/gif, image/jpeg, image/png, image/webp" class="hidden"
         onchange="handleLaxianUpload(event)">
+    <input type="file" id="vip-welcome-gif-upload" accept="image/gif" class="hidden" onchange="handleVipWelcomeGifUpload(event)">
 
     <div id="message-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <div class="bg-white/10 backdrop-blur-sm border-[4px] border-black p-8 max-w-sm w-full mx-4 shadow-xl">
@@ -198,6 +235,10 @@
         let gmkObjects = [];
         const gmkStates = new Map();
         let gmkLoaded = false;
+        let gmkSettingsLoaded = false;
+        let vipWelcomeGifAction = 'keep';
+        let vipWelcomeGifFile = null;
+        let vipWelcomeGifPreviewUrl = null;
 
         let globalOriginalData = {
             "mode": "pro", "super_admins": [], "kefus": [], "online_kefus": [],
@@ -614,6 +655,7 @@
 
                 const data = await response.json();
                 await loadDataToUI(data);
+                await loadGmkSettings();
 
                 // 💡 验证成功，解锁并隐藏验证码窗口
                 document.getElementById('verify-modal').classList.add('hidden');
@@ -633,17 +675,94 @@
 
         function switchPage(page) {
             const isGmk = page === 'gmk';
-            document.getElementById('config-page').classList.toggle('hidden', isGmk);
+            const isSettings = page === 'settings';
+            document.getElementById('config-page').classList.toggle('hidden', page !== 'config');
             document.getElementById('gmk-page').classList.toggle('hidden', !isGmk);
-            document.getElementById('config-tab').className = `border-[3px] border-black px-4 py-2 font-bold ${isGmk ? 'bg-white' : 'bg-[#e6f4e8]'}`;
+            document.getElementById('settings-page').classList.toggle('hidden', !isSettings);
+            document.getElementById('config-tab').className = `border-[3px] border-black px-4 py-2 font-bold ${page === 'config' ? 'bg-[#e6f4e8]' : 'bg-white'}`;
             document.getElementById('gmk-tab').className = `border-[3px] border-black px-4 py-2 font-bold ${isGmk ? 'bg-[#e6f4e8]' : 'bg-white'}`;
+            document.getElementById('settings-tab').className = `border-[3px] border-black px-4 py-2 font-bold ${isSettings ? 'bg-[#e6f4e8]' : 'bg-white'}`;
             if (isGmk && !gmkLoaded && currentToken) loadGmkObjects();
+            if (isSettings && !gmkSettingsLoaded && currentToken) loadGmkSettings();
         }
 
         async function gmkFetch(path) {
             const response = await fetch(`${API_BASE_URL}${path}`, { headers: { 'X-Token': currentToken || '' } });
             if (!response.ok) throw new Error(response.status === 403 ? '管理链接已失效' : '冠名卡数据加载失败');
             return response;
+        }
+
+        function renderVipWelcomeGif(url, usingDefault, label = '') {
+            const preview = document.getElementById('vip-welcome-gif-preview');
+            preview.innerHTML = '';
+            const image = document.createElement('img');
+            image.src = url;
+            image.alt = '贵宾欢迎 GIF 预览';
+            image.className = 'max-h-[250px] max-w-full border-[2px] border-black bg-white';
+            image.onerror = () => { preview.innerText = 'GIF 预览加载失败；保存后机器人会自动回退默认 GIF。'; };
+            preview.appendChild(image);
+            document.getElementById('vip-welcome-gif-status').innerText = label || (usingDefault ? '当前使用默认欢迎 GIF。' : '当前使用本群自定义欢迎 GIF。');
+        }
+
+        async function loadGmkSettings() {
+            const groupId = document.getElementById('group-id-input').value.trim();
+            if (!groupId || !currentToken) return;
+            try {
+                const response = await gmkFetch(`/api/gmk/${groupId}/settings`);
+                const settings = await response.json();
+                document.getElementById('gmk-expire-days').value = settings.gmk_expire_days;
+                document.getElementById('vip-welcome-threshold').value = settings.vip_welcome_threshold;
+                document.getElementById('vip-welcome-message').value = settings.vip_welcome_message;
+                vipWelcomeGifAction = 'keep';
+                vipWelcomeGifFile = null;
+                renderVipWelcomeGif(`${API_BASE_URL}${settings.vip_welcome_gif_url}`, settings.using_default_gif);
+                gmkSettingsLoaded = true;
+            } catch (error) {
+                document.getElementById('vip-welcome-gif-status').innerText = error.message;
+            }
+        }
+
+        function handleVipWelcomeGifUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            if (file.type !== 'image/gif') {
+                showMessage('贵宾欢迎图片仅支持 GIF 格式。');
+                event.target.value = '';
+                return;
+            }
+            if (vipWelcomeGifPreviewUrl) URL.revokeObjectURL(vipWelcomeGifPreviewUrl);
+            vipWelcomeGifPreviewUrl = URL.createObjectURL(file);
+            vipWelcomeGifFile = file;
+            vipWelcomeGifAction = 'replace';
+            renderVipWelcomeGif(vipWelcomeGifPreviewUrl, false, `将替换为：${file.name}`);
+            event.target.value = '';
+        }
+
+        function resetVipWelcomeGif() {
+            if (vipWelcomeGifPreviewUrl) URL.revokeObjectURL(vipWelcomeGifPreviewUrl);
+            vipWelcomeGifPreviewUrl = null;
+            vipWelcomeGifFile = null;
+            vipWelcomeGifAction = 'reset';
+            renderVipWelcomeGif(`${API_BASE_URL}/activity/hygl.gif`, true, '保存后将恢复默认欢迎 GIF。');
+        }
+
+        function appendGmkSettings(formData) {
+            const expireDays = document.getElementById('gmk-expire-days').value.trim();
+            const threshold = document.getElementById('vip-welcome-threshold').value.trim();
+            const message = document.getElementById('vip-welcome-message').value;
+            if (!/^\d+$/.test(expireDays) || !/^\d+$/.test(threshold)) {
+                throw new Error('冠名卡有效期和贵宾欢迎门槛必须是非负整数。');
+            }
+            if (!message.trim()) throw new Error('贵宾欢迎话术不能为空。');
+            formData.append('gmk_settings', JSON.stringify({
+                gmk_expire_days: expireDays,
+                vip_welcome_threshold: threshold,
+                vip_welcome_message: message,
+                vip_welcome_gif_action: vipWelcomeGifAction
+            }));
+            if (vipWelcomeGifAction === 'replace' && vipWelcomeGifFile) {
+                formData.append('vip_welcome_gif', vipWelcomeGifFile, vipWelcomeGifFile.name);
+            }
         }
 
         async function loadGmkObjects() {
@@ -1007,6 +1126,7 @@
                 }
                 formData.append('deleted_images', JSON.stringify(filesToDelete));
                 appendGmkChanges(formData);
+                appendGmkSettings(formData);
 
                 const response = await fetch(`${API_BASE_URL}/api/upload`, {
                     method: 'POST',
@@ -1025,7 +1145,7 @@
 
                 initialFilePaths = new Set(usedFilePaths);
                 const deleteMsg = filesToDelete.length > 0 ? ` 并清理了 ${filesToDelete.length} 张废弃图片。` : "。";
-                showMessage(`保存成功！\n数据已同步到服务器${deleteMsg}\n\n👉 提示：请在QQ群内发送【重载数据】使新配置生效！`);
+                showMessage(`保存成功！\n数据已同步到服务器${deleteMsg}\n\n👉 提示：短句等群配置需在 QQ 群发送【重载数据】后生效；群设置会在下次贵宾欢迎或冠名卡处理时生效。`);
 
             } catch (err) {
                 console.error(err);
