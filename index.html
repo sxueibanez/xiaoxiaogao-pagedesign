@@ -38,6 +38,13 @@
             </div>
         </div>
 
+        <div class="flex gap-3 mb-8">
+            <button id="config-tab" onclick="switchPage('config')" class="border-[3px] border-black px-4 py-2 font-bold bg-[#e6f4e8]">群配置</button>
+            <button id="gmk-tab" onclick="switchPage('gmk')" class="border-[3px] border-black px-4 py-2 font-bold bg-white">冠名卡管理</button>
+        </div>
+
+        <div id="config-page">
+
         <p class="text-center font-bold text-red-500 mb-8 tracking-wider">目前不支持苹果用户上传图片</p>
 
         <div class="mb-16">
@@ -138,6 +145,23 @@
                 class="border-[4px] border-black bg-black text-white px-12 py-4 text-2xl font-bold tracking-widest hover:bg-gray-800 transition-all cursor-pointer shadow-[8px_8px_0px_0px_rgba(0,0,0,0.2)] active:shadow-none active:translate-y-2 active:translate-x-2">保存提交</button>
         </div>
 
+        </div>
+
+        <div id="gmk-page" class="hidden">
+            <div class="border-[3px] border-black bg-[#e6f4e8] p-5 mb-6">
+                <h2 class="text-xl font-black mb-3">冠名卡管理</h2>
+                <div class="flex gap-3">
+                    <input id="gmk-search" oninput="renderGmkObjects()" placeholder="搜索 QQ 号" class="grow border-[2px] border-black p-2 bg-white font-bold">
+                    <button onclick="promptGmkUser()" class="border-[2px] border-black px-3 font-bold bg-white">添加对象</button>
+                </div>
+                <p id="gmk-status" class="text-sm font-bold mt-3">切换到本页后加载拥有冠名卡的对象。</p>
+            </div>
+            <div id="gmk-objects" class="space-y-3"></div>
+            <div class="mt-12 flex justify-center">
+                <button onclick="submitData()" class="border-[4px] border-black bg-black text-white px-12 py-4 text-xl font-bold tracking-widest">保存提交全部改动</button>
+            </div>
+        </div>
+
     </div>
 
     <input type="file" id="image-upload" accept="image/jpeg, image/png, image/gif, image/webp" multiple class="hidden"
@@ -171,6 +195,9 @@
     <script>
         const API_BASE_URL = "https://api.xiaoxiaogao.xyz";
         let currentToken = "";
+        let gmkObjects = [];
+        const gmkStates = new Map();
+        let gmkLoaded = false;
 
         let globalOriginalData = {
             "mode": "pro", "super_admins": [], "kefus": [], "online_kefus": [],
@@ -604,6 +631,138 @@
 
         function closeModal() { document.getElementById('message-modal').classList.add('hidden'); }
 
+        function switchPage(page) {
+            const isGmk = page === 'gmk';
+            document.getElementById('config-page').classList.toggle('hidden', isGmk);
+            document.getElementById('gmk-page').classList.toggle('hidden', !isGmk);
+            document.getElementById('config-tab').className = `border-[3px] border-black px-4 py-2 font-bold ${isGmk ? 'bg-white' : 'bg-[#e6f4e8]'}`;
+            document.getElementById('gmk-tab').className = `border-[3px] border-black px-4 py-2 font-bold ${isGmk ? 'bg-[#e6f4e8]' : 'bg-white'}`;
+            if (isGmk && !gmkLoaded && currentToken) loadGmkObjects();
+        }
+
+        async function gmkFetch(path) {
+            const response = await fetch(`${API_BASE_URL}${path}`, { headers: { 'X-Token': currentToken || '' } });
+            if (!response.ok) throw new Error(response.status === 403 ? '管理链接已失效' : '冠名卡数据加载失败');
+            return response;
+        }
+
+        async function loadGmkObjects() {
+            const status = document.getElementById('gmk-status');
+            status.innerText = '正在加载拥有冠名卡的对象…';
+            try {
+                const response = await gmkFetch(`/api/gmk/${document.getElementById('group-id-input').value}/objects`);
+                gmkObjects = (await response.json()).objects || [];
+                gmkLoaded = true;
+                status.innerText = `已找到 ${gmkObjects.length} 个拥有冠名卡的对象（图片尚未加载）。`;
+                renderGmkObjects();
+            } catch (error) { status.innerText = error.message; }
+        }
+
+        function gmkState(qq) {
+            if (!gmkStates.has(qq)) gmkStates.set(qq, { qq, cards: [], loaded: false, changed: false, nextIndex: 1 });
+            return gmkStates.get(qq);
+        }
+
+        function renderGmkObjects() {
+            const container = document.getElementById('gmk-objects');
+            const query = document.getElementById('gmk-search').value.trim();
+            const rows = gmkObjects.filter(item => item.qq.includes(query)).sort((a, b) => {
+                const aCount = gmkStates.get(a.qq)?.loaded ? gmkStates.get(a.qq).cards.filter(card => !card.deleted).length : a.count;
+                const bCount = gmkStates.get(b.qq)?.loaded ? gmkStates.get(b.qq).cards.filter(card => !card.deleted).length : b.count;
+                return bCount - aCount || a.qq.localeCompare(b.qq);
+            });
+            container.innerHTML = rows.length ? rows.map(item => {
+                const state = gmkStates.get(item.qq);
+                const open = state && state.open;
+                const count = state && state.loaded ? state.cards.filter(card => !card.deleted).length : item.count;
+                return `<div class="border-[3px] border-black bg-white/80"><button onclick="toggleGmkObject('${item.qq}')" class="w-full flex justify-between p-4 font-black text-left"><span>对象：${item.qq}</span><span>${count} 张 ${open ? '▲' : '▼'}</span></button><div id="gmk-detail-${item.qq}" class="${open ? '' : 'hidden'} border-t-[2px] border-black p-4"></div></div>`;
+            }).join('') : '<p class="text-center font-bold p-8">没有匹配的对象。</p>';
+            rows.forEach(item => { const state = gmkStates.get(item.qq); if (state && state.open && state.loaded) renderGmkDetail(item.qq); });
+        }
+
+        async function toggleGmkObject(qq) {
+            const state = gmkState(qq);
+            state.open = !state.open;
+            if (state.open && !state.loaded) {
+                renderGmkObjects();
+                try {
+                    const response = await gmkFetch(`/api/gmk/${document.getElementById('group-id-input').value}/objects/${qq}`);
+                    const data = await response.json();
+                    state.cards = data.cards || [];
+                    state.nextIndex = state.cards.reduce((max, card) => Math.max(max, Number((card.file.match(/_(\d+)\./) || [0, 0])[1])), 0) + 1;
+                    state.loaded = true;
+                } catch (error) { state.error = error.message; }
+            }
+            renderGmkObjects();
+        }
+
+        async function loadGmkPreview(qq, card, target) {
+            if (card.previewUrl) { target.src = card.previewUrl; return; }
+            const groupId = document.getElementById('group-id-input').value;
+            const thumb = card.kind === 'image' ? '?thumbnail=true' : '';
+            try {
+                const response = await gmkFetch(`/api/gmk/${groupId}/media/${encodeURIComponent(card.file)}${thumb}`);
+                card.previewUrl = URL.createObjectURL(await response.blob());
+                target.src = card.previewUrl;
+            } catch { target.replaceWith(Object.assign(document.createElement('span'), { innerText: '预览加载失败' })); }
+        }
+
+        function renderGmkDetail(qq) {
+            const state = gmkState(qq);
+            const target = document.getElementById(`gmk-detail-${qq}`);
+            if (!target) return;
+            if (state.error) { target.innerText = state.error; return; }
+            const cards = state.cards.filter(card => !card.deleted);
+            target.innerHTML = `<div class="flex flex-wrap gap-3 mb-4">${cards.map((card, i) => `<div class="w-36 border-[2px] border-black p-2"><div class="h-24 flex items-center justify-center bg-gray-100">${card.kind === 'video' ? `<button onclick="playGmkVideo('${qq}', ${i})" class="font-bold">▶ 播放视频</button>` : `<img id="gmk-img-${qq}-${i}" class="max-h-24 max-w-full" alt="冠名卡">`}</div><button onclick="deleteGmkCard('${qq}', ${i})" class="mt-2 w-full border-[2px] border-black bg-red-300 font-bold">删除</button></div>`).join('')}</div><div class="flex gap-3"><input id="gmk-upload-${qq}" type="file" accept="image/jpeg,image/png,image/webp,image/gif,video/mp4" multiple class="hidden" onchange="addGmkFiles('${qq}', this.files)"><button onclick="document.getElementById('gmk-upload-${qq}').click()" class="border-[2px] border-black p-2 font-bold bg-[#e6f4e8]">上传图片 / GIF / MP4</button></div>`;
+            cards.forEach((card, i) => { if (card.kind !== 'video') loadGmkPreview(qq, card, document.getElementById(`gmk-img-${qq}-${i}`)); });
+        }
+
+        async function playGmkVideo(qq, index) {
+            const card = gmkState(qq).cards.filter(item => !item.deleted)[index];
+            const groupId = document.getElementById('group-id-input').value;
+            try {
+                const response = await gmkFetch(`/api/gmk/${groupId}/media/${encodeURIComponent(card.file)}`);
+                const url = URL.createObjectURL(await response.blob());
+                window.open(url, '_blank', 'noopener');
+            } catch (error) { showMessage(error.message); }
+        }
+
+        async function compressGmkImage(file) {
+            if (!file.type.startsWith('image/') || file.type === 'image/gif') return file;
+            const image = await createImageBitmap(file);
+            const scale = Math.min(1, 1920 / Math.max(image.width, image.height));
+            if (scale === 1 && file.size < 1024 * 1024) return file;
+            const canvas = document.createElement('canvas'); canvas.width = Math.round(image.width * scale); canvas.height = Math.round(image.height * scale);
+            canvas.getContext('2d').drawImage(image, 0, 0, canvas.width, canvas.height);
+            const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/webp', 0.85));
+            return new File([blob || file], file.name.replace(/\.[^.]+$/, '.webp'), { type: 'image/webp' });
+        }
+
+        async function addGmkFiles(qq, files) {
+            const state = gmkState(qq);
+            for (const rawFile of Array.from(files)) {
+                if (!/^(image\/(jpeg|png|webp|gif)|video\/mp4)$/.test(rawFile.type)) continue;
+                const file = await compressGmkImage(rawFile);
+                const ext = file.name.split('.').pop().toLowerCase();
+                const name = `${qq}_${state.nextIndex++}.${ext}`;
+                state.cards.push({ file: name, add_time: Date.now() / 1000, kind: file.type === 'video/mp4' ? 'video' : (file.type === 'image/gif' ? 'gif' : 'image'), localFile: file, previewUrl: file.type === 'video/mp4' ? null : URL.createObjectURL(file) });
+            }
+            state.changed = true; renderGmkObjects();
+        }
+
+        function deleteGmkCard(qq, index) { const state = gmkState(qq); state.cards.filter(card => !card.deleted)[index].deleted = true; state.changed = true; renderGmkObjects(); }
+        function promptGmkUser() { const qq = prompt('请输入 QQ 号'); if (!qq || !/^\d+$/.test(qq)) return; if (!gmkObjects.some(item => item.qq === qq)) gmkObjects.push({ qq, count: 0 }); const state = gmkState(qq); state.open = true; state.loaded = true; renderGmkObjects(); }
+
+        function appendGmkChanges(formData) {
+            const changes = {};
+            for (const [qq, state] of gmkStates) {
+                if (!state.changed) continue;
+                changes[qq] = state.cards.filter(card => !card.deleted).map(card => ({ file: card.file, add_time: card.add_time }));
+                state.cards.filter(card => !card.deleted && card.localFile).forEach(card => formData.append('new_gmk_media', card.localFile, card.file));
+            }
+            formData.append('gmk_changes', JSON.stringify(changes));
+        }
+
         async function loadDataToUI(data) {
             globalOriginalData = { ...globalOriginalData, ...data };
             initialFilePaths.clear();
@@ -847,6 +1006,7 @@
                     if (!usedFilePaths.has(path)) { filesToDelete.push(path); }
                 }
                 formData.append('deleted_images', JSON.stringify(filesToDelete));
+                appendGmkChanges(formData);
 
                 const response = await fetch(`${API_BASE_URL}/api/upload`, {
                     method: 'POST',
