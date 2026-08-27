@@ -38,6 +38,11 @@
             </div>
         </div>
 
+        <div class="mb-8 grid sm:grid-cols-2 gap-3 font-bold">
+            <div class="border-[3px] border-black bg-white p-3">活动图片储存：<span id="activity-storage">验证后加载</span></div>
+            <div class="border-[3px] border-black bg-white p-3">冠名卡储存：<span id="gmk-storage">验证后加载</span></div>
+        </div>
+
         <div class="flex gap-3 mb-8">
             <button id="config-tab" onclick="switchPage('config')" class="border-[3px] border-black px-4 py-2 font-bold bg-[#e6f4e8]">群配置</button>
             <button id="gmk-tab" onclick="switchPage('gmk')" class="border-[3px] border-black px-4 py-2 font-bold bg-white">冠名卡管理</button>
@@ -647,6 +652,7 @@
 
                 if (response.status === 404) {
                     // 认证成功，但为新群
+                    await loadStorage();
                     document.getElementById('verify-modal').classList.add('hidden');
                     showMessage(`验证通过！\n这是一个全新的群，还没有历史配置，请直接开始创建。`);
                     return;
@@ -656,6 +662,7 @@
                 const data = await response.json();
                 await loadDataToUI(data);
                 await loadGmkSettings();
+                await loadStorage();
 
                 // 💡 验证成功，解锁并隐藏验证码窗口
                 document.getElementById('verify-modal').classList.add('hidden');
@@ -672,6 +679,18 @@
         }
 
         function closeModal() { document.getElementById('message-modal').classList.add('hidden'); }
+
+        async function loadStorage() {
+            const groupId = document.getElementById('group-id-input').value.trim();
+            if (!groupId) return;
+            const response = await fetch(`${API_BASE_URL}/api/storage/${groupId}`, {
+                headers: { 'X-Token': currentToken || '' }
+            });
+            if (!response.ok) throw new Error('储存状态加载失败');
+            const storage = await response.json();
+            document.getElementById('activity-storage').innerText = storage.activity.display;
+            document.getElementById('gmk-storage').innerText = storage.gmk.display;
+        }
 
         function switchPage(page) {
             const isGmk = page === 'gmk';
@@ -1141,7 +1160,11 @@
                     return;
                 }
 
-                if (!response.ok) throw new Error(`服务器响应错误: ${response.status}`);
+                if (!response.ok) {
+                    const payload = await response.json().catch(() => ({}));
+                    await loadStorage().catch(() => {});
+                    throw new Error(payload.detail || `服务器响应错误: ${response.status}`);
+                }
 
                 initialFilePaths = new Set(usedFilePaths);
                 const deleteMsg = filesToDelete.length > 0 ? ` 并清理了 ${filesToDelete.length} 张废弃图片。` : "。";
