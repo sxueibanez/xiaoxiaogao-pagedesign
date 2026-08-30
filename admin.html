@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理员后台</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-slate-900 p-4 sm:p-8 font-sans text-black">
+    <main class="mx-auto max-w-7xl">
+        <section id="login-panel" class="mx-auto mt-20 max-w-md border-[4px] border-black bg-[#e6f4e8] p-8 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+            <h1 class="mb-2 text-center text-2xl font-black">管理员后台</h1>
+            <p class="mb-6 text-center text-sm font-bold text-gray-600">输入群号和管理员验证码后进入对应群后台。</p>
+            <form id="login-form" class="space-y-4">
+                <input id="admin-group-id" inputmode="numeric" placeholder="请输入群号" required class="w-full border-[3px] border-black bg-white p-3 text-xl font-bold outline-none">
+                <input id="admin-code" inputmode="numeric" placeholder="请输入管理员验证码" maxlength="4" required class="w-full border-[3px] border-black bg-white p-3 text-xl font-bold outline-none">
+                <button class="w-full border-[3px] border-black bg-white p-3 text-lg font-black hover:bg-[#b5e0bb]">进入群后台</button>
+            </form>
+            <p id="admin-error" class="mt-4 hidden text-center font-bold text-red-600"></p>
+        </section>
+
+        <section id="dashboard-panel" class="hidden">
+            <div class="mb-4 flex items-center justify-between gap-4 text-white">
+                <strong id="admin-title" class="text-xl">群后台</strong>
+                <button onclick="location.reload()" class="border-2 border-white px-4 py-2 font-bold">切换群号</button>
+            </div>
+            <iframe id="dashboard-frame" title="群管理后台" class="h-[calc(100vh-6rem)] w-full border-0 bg-white"></iframe>
+        </section>
+    </main>
+
+    <script>
+        const API_BASE_URL = 'https://api.xiaoxiaogao.xyz';
+
+        document.getElementById('login-form').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const groupId = document.getElementById('admin-group-id').value.trim();
+            const verifyCode = document.getElementById('admin-code').value.trim();
+            const error = document.getElementById('admin-error');
+            error.classList.add('hidden');
+            if (!/^\d+$/.test(groupId)) {
+                error.innerText = '请输入有效的群号。';
+                error.classList.remove('hidden');
+                return;
+            }
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/admin/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ group_id: groupId, verify_code: verifyCode })
+                });
+                if (!response.ok) throw new Error('群号或管理员验证码不正确。');
+                const { token } = await response.json();
+                document.getElementById('admin-title').innerText = `正在管理群：${groupId}`;
+                document.getElementById('dashboard-frame').src = `./index.html?group=${encodeURIComponent(groupId)}&token=${encodeURIComponent(token)}&admin=1`;
+                document.getElementById('login-panel').classList.add('hidden');
+                document.getElementById('dashboard-panel').classList.remove('hidden');
+            } catch (err) {
+                error.innerText = err.message;
+                error.classList.remove('hidden');
+            }
+        });
+    </script>
+</body>
+</html>
