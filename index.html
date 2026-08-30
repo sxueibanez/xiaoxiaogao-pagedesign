@@ -873,8 +873,14 @@
             if (!target) return;
             if (state.error) { target.innerText = state.error; return; }
             const cards = state.cards.filter(card => !card.deleted);
-            target.innerHTML = `<div class="flex flex-wrap gap-3 mb-4">${cards.map((card, i) => `<div class="w-36 border-[2px] border-black p-2"><div class="h-24 flex items-center justify-center bg-gray-100">${card.kind === 'video' ? `<button onclick="playGmkVideo('${qq}', ${i})" class="font-bold">▶ 播放视频</button>` : `<img id="gmk-img-${qq}-${i}" class="max-h-24 max-w-full" alt="冠名卡">`}</div><button onclick="deleteGmkCard('${qq}', ${i})" class="mt-2 w-full border-[2px] border-black bg-red-300 font-bold">删除</button></div>`).join('')}</div><div class="flex gap-3"><input id="gmk-upload-${qq}" type="file" accept="image/jpeg,image/png,image/webp,image/gif,video/mp4" multiple class="hidden" onchange="addGmkFiles('${qq}', this.files)"><button onclick="document.getElementById('gmk-upload-${qq}').click()" class="border-[2px] border-black p-2 font-bold bg-[#e6f4e8]">上传图片 / GIF / MP4</button></div>`;
+            target.innerHTML = `<div class="flex flex-wrap gap-3 mb-4">${cards.map((card, i) => `<div class="w-36 border-[2px] border-black p-2"><div class="h-24 flex items-center justify-center bg-gray-100">${card.kind === 'video' ? `<button onclick="playGmkVideo('${qq}', ${i})" class="font-bold">▶ 播放视频</button>` : `<img id="gmk-img-${qq}-${i}" class="max-h-24 max-w-full" alt="冠名卡">`}</div><div class="mt-1 text-center text-xs font-bold text-gray-600">${formatFileSize(card.size_bytes)}</div><button onclick="deleteGmkCard('${qq}', ${i})" class="mt-2 w-full border-[2px] border-black bg-red-300 font-bold">删除</button></div>`).join('')}</div><div class="flex gap-3"><input id="gmk-upload-${qq}" type="file" accept="image/jpeg,image/png,image/webp,image/gif,video/mp4" multiple class="hidden" onchange="addGmkFiles('${qq}', this.files)"><button onclick="document.getElementById('gmk-upload-${qq}').click()" class="border-[2px] border-black p-2 font-bold bg-[#e6f4e8]">上传图片 / GIF / MP4</button></div>`;
             cards.forEach((card, i) => { if (card.kind !== 'video') loadGmkPreview(qq, card, document.getElementById(`gmk-img-${qq}-${i}`)); });
+        }
+
+        function formatFileSize(bytes) {
+            if (!Number.isFinite(bytes) || bytes < 1024) return `${bytes || 0} B`;
+            if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+            return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
         }
 
         async function playGmkVideo(qq, index) {
@@ -905,7 +911,7 @@
                 const file = await compressGmkImage(rawFile);
                 const ext = file.name.split('.').pop().toLowerCase();
                 const name = `${qq}_${state.nextIndex++}.${ext}`;
-                state.cards.push({ file: name, add_time: Date.now() / 1000, kind: file.type === 'video/mp4' ? 'video' : (file.type === 'image/gif' ? 'gif' : 'image'), localFile: file, previewUrl: file.type === 'video/mp4' ? null : URL.createObjectURL(file) });
+                state.cards.push({ file: name, add_time: Date.now() / 1000, kind: file.type === 'video/mp4' ? 'video' : (file.type === 'image/gif' ? 'gif' : 'image'), size_bytes: file.size, localFile: file, previewUrl: file.type === 'video/mp4' ? null : URL.createObjectURL(file) });
             }
             state.changed = true; renderGmkObjects();
         }
