@@ -39,8 +39,20 @@
         </div>
 
         <div class="mb-8 grid sm:grid-cols-2 gap-3 font-bold">
-            <div class="border-[3px] border-black bg-white p-3">活动图片储存：<span id="activity-storage">验证后加载</span></div>
-            <div class="border-[3px] border-black bg-white p-3">冠名卡储存：<span id="gmk-storage">验证后加载</span></div>
+            <div class="border-[3px] border-black bg-white p-3">
+                <div class="mb-2">活动图片储存</div>
+                <div class="relative h-8 overflow-hidden border-[2px] border-black bg-gray-200">
+                    <div id="activity-storage-bar" class="absolute inset-y-0 left-0 bg-[#35b85a] transition-all duration-500" style="width: 0%"></div>
+                    <span id="activity-storage" class="absolute inset-0 flex items-center justify-center text-sm">验证后加载</span>
+                </div>
+            </div>
+            <div class="border-[3px] border-black bg-white p-3">
+                <div class="mb-2">冠名卡储存</div>
+                <div class="relative h-8 overflow-hidden border-[2px] border-black bg-gray-200">
+                    <div id="gmk-storage-bar" class="absolute inset-y-0 left-0 bg-[#35b85a] transition-all duration-500" style="width: 0%"></div>
+                    <span id="gmk-storage" class="absolute inset-0 flex items-center justify-center text-sm">验证后加载</span>
+                </div>
+            </div>
         </div>
 
         <div class="flex gap-3 mb-8">
@@ -688,8 +700,17 @@
             });
             if (!response.ok) throw new Error('储存状态加载失败');
             const storage = await response.json();
-            document.getElementById('activity-storage').innerText = storage.activity.display;
-            document.getElementById('gmk-storage').innerText = storage.gmk.display;
+            setStorageBar('activity', storage.activity);
+            setStorageBar('gmk', storage.gmk);
+        }
+
+        function setStorageBar(kind, storage) {
+            const percent = Math.min(100, Math.round(storage.used_bytes / storage.limit_bytes * 100));
+            const color = percent >= 90 ? '#ef4444' : percent >= 70 ? '#f59e0b' : '#35b85a';
+            document.getElementById(`${kind}-storage`).innerText = `${storage.display}（${percent}%）`;
+            const bar = document.getElementById(`${kind}-storage-bar`);
+            bar.style.width = `${percent}%`;
+            bar.style.backgroundColor = color;
         }
 
         function switchPage(page) {
