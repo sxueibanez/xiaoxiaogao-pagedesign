@@ -55,10 +55,11 @@
             </div>
         </div>
 
-        <div class="flex gap-3 mb-8">
+        <div class="flex flex-wrap gap-3 mb-8">
             <button id="config-tab" onclick="switchPage('config')" class="border-[3px] border-black px-4 py-2 font-bold bg-[#e6f4e8]">群配置</button>
             <button id="gmk-tab" onclick="switchPage('gmk')" class="border-[3px] border-black px-4 py-2 font-bold bg-white">冠名卡管理</button>
             <button id="settings-tab" onclick="switchPage('settings')" class="border-[3px] border-black px-4 py-2 font-bold bg-white">群设置</button>
+            <button id="three-d-tab" onclick="switchPage('three-d')" class="border-[3px] border-black px-4 py-2 font-bold bg-white">3D 图片</button>
         </div>
 
         <div id="config-page">
@@ -215,6 +216,33 @@
             </div>
         </div>
 
+        <div id="three-d-page" class="hidden space-y-6">
+            <section class="border-[3px] border-black bg-white/80 p-6">
+                <h2 class="text-xl font-black mb-2">3D 图片生成</h2>
+                <p class="text-sm font-bold text-gray-600 mb-4">上传一张图片，生成写实风格的 3D CG 渲染图。每个群每月可成功生成 10 次。</p>
+                <div class="grid md:grid-cols-2 gap-4 mb-5">
+                    <figure class="border-[2px] border-black bg-white p-3">
+                        <figcaption class="font-black mb-2">原图</figcaption>
+                        <img src="image/three-d-original.png" alt="3D 图片转换前的原图示例" class="w-full border-[2px] border-black">
+                    </figure>
+                    <figure class="border-[2px] border-black bg-white p-3">
+                        <figcaption class="font-black mb-2">生成效果</figcaption>
+                        <img src="image/three-d-result.png" alt="3D 图片转换后的效果示例" class="w-full border-[2px] border-black">
+                    </figure>
+                </div>
+                <p id="three-d-quota" class="font-black mb-5">完成验证后加载本月次数。</p>
+                <input id="three-d-upload" type="file" accept="image/*" class="block w-full border-[3px] border-black p-3 bg-white font-bold mb-4">
+                <button id="three-d-generate" type="button" onclick="generateThreeD()" class="border-[3px] border-black px-6 py-3 font-bold bg-[#e6f4e8] hover:bg-[#b5e0bb] disabled:opacity-50 disabled:cursor-not-allowed">生成 3D 图片</button>
+                <p id="three-d-status" class="text-sm font-bold mt-4" aria-live="polite"></p>
+            </section>
+
+            <section id="three-d-result" class="hidden border-[3px] border-black bg-white/80 p-6">
+                <h2 class="text-xl font-black mb-4">生成结果</h2>
+                <img id="three-d-preview" alt="生成的 3D 图片" class="max-h-[520px] max-w-full border-[2px] border-black bg-white mb-4">
+                <a id="three-d-download" class="inline-block border-[3px] border-black px-6 py-3 font-bold bg-[#e6f4e8] hover:bg-[#b5e0bb]" download="3d-image.png">下载 PNG</a>
+            </section>
+        </div>
+
     </div>
 
     <input type="file" id="image-upload" accept="image/jpeg, image/png, image/gif, image/webp" multiple class="hidden"
@@ -253,6 +281,9 @@
         const gmkStates = new Map();
         let gmkLoaded = false;
         let gmkSettingsLoaded = false;
+        let panelVerified = false;
+        let threeDLoaded = false;
+        let threeDPreviewUrl = null;
         let vipWelcomeGifAction = 'keep';
         let vipWelcomeGifFile = null;
         let vipWelcomeGifPreviewUrl = null;
@@ -666,6 +697,7 @@
                 if (response.status === 404) {
                     // 认证成功，但为新群
                     await loadStorage();
+                    panelVerified = true;
                     document.getElementById('verify-modal').classList.add('hidden');
                     showMessage(`验证通过！\n这是一个全新的群，还没有历史配置，请直接开始创建。`);
                     return;
@@ -676,6 +708,7 @@
                 await loadDataToUI(data);
                 await loadGmkSettings();
                 await loadStorage();
+                panelVerified = true;
 
                 // 💡 验证成功，解锁并隐藏验证码窗口
                 document.getElementById('verify-modal').classList.add('hidden');
@@ -717,14 +750,92 @@
         function switchPage(page) {
             const isGmk = page === 'gmk';
             const isSettings = page === 'settings';
+            const isThreeD = page === 'three-d';
             document.getElementById('config-page').classList.toggle('hidden', page !== 'config');
             document.getElementById('gmk-page').classList.toggle('hidden', !isGmk);
             document.getElementById('settings-page').classList.toggle('hidden', !isSettings);
+            document.getElementById('three-d-page').classList.toggle('hidden', !isThreeD);
             document.getElementById('config-tab').className = `border-[3px] border-black px-4 py-2 font-bold ${page === 'config' ? 'bg-[#e6f4e8]' : 'bg-white'}`;
             document.getElementById('gmk-tab').className = `border-[3px] border-black px-4 py-2 font-bold ${isGmk ? 'bg-[#e6f4e8]' : 'bg-white'}`;
             document.getElementById('settings-tab').className = `border-[3px] border-black px-4 py-2 font-bold ${isSettings ? 'bg-[#e6f4e8]' : 'bg-white'}`;
+            document.getElementById('three-d-tab').className = `border-[3px] border-black px-4 py-2 font-bold ${isThreeD ? 'bg-[#e6f4e8]' : 'bg-white'}`;
             if (isGmk && !gmkLoaded && currentToken) loadGmkObjects();
             if (isSettings && !gmkSettingsLoaded && currentToken) loadGmkSettings();
+            if (isThreeD && panelVerified && !threeDLoaded) loadThreeDQuota();
+        }
+
+        function setThreeDStatus(message, isError = false) {
+            const status = document.getElementById('three-d-status');
+            status.innerText = message;
+            status.className = `text-sm font-bold mt-4 ${isError ? 'text-red-600' : 'text-gray-700'}`;
+        }
+
+        async function threeDResponseMessage(response) {
+            const data = await response.json().catch(() => ({}));
+            return data.detail || '请求失败，请稍后重试。';
+        }
+
+        async function loadThreeDQuota() {
+            const groupId = document.getElementById('group-id-input').value.trim();
+            if (!groupId || !currentToken) return;
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/three-d/${groupId}/quota`, {
+                    headers: { 'X-Token': currentToken }
+                });
+                if (!response.ok) throw new Error(await threeDResponseMessage(response));
+                const quota = await response.json();
+                document.getElementById('three-d-quota').innerText = `本月已用 ${quota.used} / 10 次，剩余 ${quota.remaining} 次`;
+                threeDLoaded = true;
+            } catch (error) {
+                setThreeDStatus(error.message, true);
+            }
+        }
+
+        async function generateThreeD() {
+            const groupId = document.getElementById('group-id-input').value.trim();
+            const input = document.getElementById('three-d-upload');
+            const button = document.getElementById('three-d-generate');
+            const file = input.files[0];
+            if (!panelVerified || !groupId || !currentToken) {
+                setThreeDStatus('请先完成管理后台验证。', true);
+                return;
+            }
+            if (!file) {
+                setThreeDStatus('请选择一张图片。', true);
+                return;
+            }
+            if (file.size > 20 * 1024 * 1024) {
+                setThreeDStatus('图片不能超过 20 MB。', true);
+                return;
+            }
+
+            button.disabled = true;
+            setThreeDStatus('正在生成，请稍候…');
+            const formData = new FormData();
+            formData.append('image', file);
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/three-d/${groupId}`, {
+                    method: 'POST',
+                    headers: { 'X-Token': currentToken },
+                    body: formData
+                });
+                if (!response.ok) throw new Error(await threeDResponseMessage(response));
+                const image = await response.blob();
+                if (!image.size) throw new Error('服务器未返回图片。');
+                if (threeDPreviewUrl) URL.revokeObjectURL(threeDPreviewUrl);
+                threeDPreviewUrl = URL.createObjectURL(image);
+                document.getElementById('three-d-preview').src = threeDPreviewUrl;
+                document.getElementById('three-d-download').href = threeDPreviewUrl;
+                document.getElementById('three-d-result').classList.remove('hidden');
+                input.value = '';
+                threeDLoaded = false;
+                await loadThreeDQuota();
+                setThreeDStatus('生成完成，可预览或下载 PNG。');
+            } catch (error) {
+                setThreeDStatus(error.message, true);
+            } finally {
+                button.disabled = false;
+            }
         }
 
         async function gmkFetch(path) {
