@@ -239,7 +239,7 @@
             <section id="three-d-result" class="hidden border-[3px] border-black bg-white/80 p-6">
                 <h2 class="text-xl font-black mb-4">生成结果</h2>
                 <img id="three-d-preview" alt="生成的 3D 图片" class="max-h-[520px] max-w-full border-[2px] border-black bg-white mb-4">
-                <a id="three-d-download" class="inline-block border-[3px] border-black px-6 py-3 font-bold bg-[#e6f4e8] hover:bg-[#b5e0bb]" download="3d-image.png">下载 PNG</a>
+                <button id="three-d-download" type="button" onclick="saveThreeDImage()" class="border-[3px] border-black px-6 py-3 font-bold bg-[#e6f4e8] hover:bg-[#b5e0bb]">下载 / 保存图片</button>
             </section>
         </div>
 
@@ -284,6 +284,7 @@
         let panelVerified = false;
         let threeDLoaded = false;
         let threeDPreviewUrl = null;
+        let threeDOutput = null;
         let vipWelcomeGifAction = 'keep';
         let vipWelcomeGifFile = null;
         let vipWelcomeGifPreviewUrl = null;
@@ -823,9 +824,9 @@
                 const image = await response.blob();
                 if (!image.size) throw new Error('服务器未返回图片。');
                 if (threeDPreviewUrl) URL.revokeObjectURL(threeDPreviewUrl);
+                threeDOutput = image;
                 threeDPreviewUrl = URL.createObjectURL(image);
                 document.getElementById('three-d-preview').src = threeDPreviewUrl;
-                document.getElementById('three-d-download').href = threeDPreviewUrl;
                 document.getElementById('three-d-result').classList.remove('hidden');
                 input.value = '';
                 threeDLoaded = false;
@@ -836,6 +837,31 @@
             } finally {
                 button.disabled = false;
             }
+        }
+
+        async function saveThreeDImage() {
+            if (!threeDOutput || !threeDPreviewUrl) return;
+            const filename = '3d-image.png';
+            try {
+                const file = new File([threeDOutput], filename, { type: 'image/png' });
+                if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                    await navigator.share({ files: [file], title: '3D 图片' });
+                    return;
+                }
+            } catch (error) {
+                if (error.name === 'AbortError') return;
+            }
+
+            if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+                if (!window.open(threeDPreviewUrl, '_blank')) window.location.href = threeDPreviewUrl;
+                setThreeDStatus('已打开图片，请长按图片后选择保存。');
+                return;
+            }
+
+            const link = document.createElement('a');
+            link.href = threeDPreviewUrl;
+            link.download = filename;
+            link.click();
         }
 
         async function gmkFetch(path) {
