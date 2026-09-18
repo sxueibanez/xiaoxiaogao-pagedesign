@@ -169,9 +169,9 @@
         <div id="settings-page" class="hidden space-y-10">
             <section class="border-[3px] border-black bg-white/80 p-6">
                 <h2 class="text-xl font-black mb-2">冠名卡有效期</h2>
-                <p class="text-sm font-bold text-gray-600 mb-4">设置冠名卡保存多久；填写 0 表示永久有效。</p>
+                <p class="text-sm font-bold text-gray-600 mb-4">未设置独立到期日的卡按添加时间计算，始终跟随本群期限；修改后会影响这些已有卡。填写 0 表示永久。</p>
                 <label class="font-bold block mb-2" for="gmk-expire-days">有效期（天）</label>
-                <input id="gmk-expire-days" type="number" min="0" step="1" value="0" class="w-full border-[3px] border-black p-3 font-bold bg-white" required>
+                <input id="gmk-expire-days" type="number" min="0" step="1" value="0" oninput="renderGmkObjects()" class="w-full border-[3px] border-black p-3 font-bold bg-white" required>
             </section>
 
             <section class="border-[3px] border-black bg-white/80 p-6">
@@ -204,6 +204,7 @@
         <div id="gmk-page" class="hidden">
             <div class="border-[3px] border-black bg-[#e6f4e8] p-5 mb-6">
                 <h2 class="text-xl font-black mb-3">冠名卡管理</h2>
+                <p class="text-sm font-bold mb-3">每张卡可跟随群默认、设置独立日期或永久有效。独立日期当天仍有效（北京时间）。编辑后请保存提交全部改动。</p>
                 <div class="flex gap-3">
                     <input id="gmk-search" oninput="renderGmkObjects()" placeholder="搜索 QQ 号" class="grow border-[2px] border-black p-2 bg-white font-bold">
                     <button onclick="promptGmkUser()" class="border-[2px] border-black px-3 font-bold bg-white">添加对象</button>
@@ -925,6 +926,7 @@
         }
 
         function appendGmkSettings(formData) {
+            if (!gmkSettingsLoaded) { formData.append('gmk_settings', '{}'); return; }
             const expireDays = document.getElementById('gmk-expire-days').value.trim();
             const threshold = document.getElementById('vip-welcome-threshold').value.trim();
             const message = document.getElementById('vip-welcome-message').value;
@@ -947,6 +949,7 @@
             const status = document.getElementById('gmk-status');
             status.innerText = '正在加载拥有冠名卡的对象…';
             try {
+                if (!gmkSettingsLoaded) await loadGmkSettings();
                 const response = await gmkFetch(`/api/gmk/${document.getElementById('group-id-input').value}/objects`);
                 gmkObjects = (await response.json()).objects || [];
                 gmkLoaded = true;
@@ -986,6 +989,8 @@
                     const response = await gmkFetch(`/api/gmk/${document.getElementById('group-id-input').value}/objects/${qq}`);
                     const data = await response.json();
                     state.cards = data.cards || [];
+                    state.expireDays = data.default_expire_days || 0;
+                    state.cards.forEach(card => { card.originalExpireDate = card.expire_date; });
                     state.nextIndex = state.cards.reduce((max, card) => Math.max(max, Number((card.file.match(/_(\d+)\./) || [0, 0])[1])), 0) + 1;
                     state.loaded = true;
                 } catch (error) { state.error = error.message; }
@@ -1010,8 +1015,50 @@
             if (!target) return;
             if (state.error) { target.innerText = state.error; return; }
             const cards = state.cards.filter(card => !card.deleted);
-            target.innerHTML = `<div class="flex flex-wrap gap-3 mb-4">${cards.map((card, i) => `<div class="w-36 border-[2px] border-black p-2"><div class="h-24 flex items-center justify-center bg-gray-100">${card.kind === 'video' ? `<button onclick="playGmkVideo('${qq}', ${i})" class="font-bold">▶ 播放视频</button>` : `<img id="gmk-img-${qq}-${i}" class="max-h-24 max-w-full" alt="冠名卡">`}</div><div class="mt-1 text-center text-xs font-bold text-gray-600">${formatFileSize(card.size_bytes)}</div><button onclick="deleteGmkCard('${qq}', ${i})" class="mt-2 w-full border-[2px] border-black bg-red-300 font-bold">删除</button></div>`).join('')}</div><div class="flex gap-3"><input id="gmk-upload-${qq}" type="file" accept="image/jpeg,image/png,image/webp,image/gif,video/mp4" multiple class="hidden" onchange="addGmkFiles('${qq}', this.files)"><button onclick="document.getElementById('gmk-upload-${qq}').click()" class="border-[2px] border-black p-2 font-bold bg-[#e6f4e8]">上传图片 / GIF / MP4</button></div>`;
+            target.innerHTML = `<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">${cards.map((card, i) => {
+                const mode = gmkExpiryMode(card);
+                return `<div class="min-w-0 border-[2px] border-black p-3 bg-white">
+                    <div class="flex justify-between text-sm font-bold mb-2"><span>${i + 1}号${card.localFile ? ' · 待上传' : ''}</span><span>${formatFileSize(card.size_bytes)}</span></div>
+                    <div class="h-40 flex items-center justify-center bg-gray-100 overflow-hidden">${card.kind === 'video' ? `<button onclick="playGmkVideo('${qq}', ${i})" class="font-bold">▶ 播放视频</button>` : `<img id="gmk-img-${qq}-${i}" class="max-h-40 max-w-full object-contain" alt="第${i + 1}张冠名卡">`}</div>
+                    <p id="gmk-expiry-label-${qq}-${i}" class="mt-3 text-sm font-bold">${gmkExpiryText(card, state)}</p>
+                    <label for="gmk-mode-${qq}-${i}" class="block mt-3 mb-1 text-sm font-bold">期限设置</label>
+                    <select id="gmk-mode-${qq}-${i}" onchange="setGmkExpiry('${qq}', ${i}, this.value)" class="w-full border-[2px] border-black p-2 bg-white font-bold">${gmkExpiryOptions(mode)}</select>
+                    ${mode === 'date' ? `<label for="gmk-date-${qq}-${i}" class="block mt-2 text-sm font-bold">到期日（北京时间）</label><input id="gmk-date-${qq}-${i}" type="date" value="${card.expire_date}" min="${gmkToday()}" onchange="setGmkExpiry('${qq}', ${i}, 'date', this.value)" class="w-full min-w-0 mt-1 border-[2px] border-black p-2 bg-white">` : ''}
+                    <button onclick="deleteGmkCard('${qq}', ${i})" class="mt-3 w-full border-[2px] border-black bg-red-300 p-2 font-bold">删除</button>
+                </div>`;
+            }).join('')}</div>
+            <div class="border-[2px] border-black p-3 bg-[#e6f4e8] space-y-2">
+                <p class="font-bold">批量上传</p><p class="text-sm">以下期限应用于本次上传的所有图片 / GIF / MP4。</p>
+                <div class="flex flex-wrap gap-2"><select aria-label="本次上传期限" id="gmk-upload-mode-${qq}" onchange="document.getElementById('gmk-upload-date-${qq}').hidden = this.value !== 'date'" class="border-[2px] border-black p-2 bg-white font-bold">${gmkExpiryOptions('default')}</select>
+                <input aria-label="本次上传到期日" id="gmk-upload-date-${qq}" type="date" min="${gmkToday()}" value="${gmkToday()}" hidden class="min-w-0 border-[2px] border-black p-2 bg-white"></div>
+                <input id="gmk-upload-${qq}" type="file" accept="image/jpeg,image/png,image/webp,image/gif,video/mp4" multiple class="hidden" onchange="addGmkFiles('${qq}', this.files)"><button onclick="document.getElementById('gmk-upload-${qq}').click()" class="border-[2px] border-black p-2 font-bold bg-white">选择文件上传</button>
+            </div>`;
             cards.forEach((card, i) => { if (card.kind !== 'video') loadGmkPreview(qq, card, document.getElementById(`gmk-img-${qq}-${i}`)); });
+        }
+
+        function gmkToday() { return new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Shanghai' }); }
+        function gmkExpiryMode(card) { return !Object.hasOwn(card, 'expire_date') ? 'default' : card.expire_date === null ? 'forever' : 'date'; }
+        function gmkExpiryOptions(mode) {
+            return [['default', '跟随群默认'], ['date', '独立到期日'], ['forever', '永久有效']].map(([value, text]) => `<option value="${value}" ${mode === value ? 'selected' : ''}>${text}</option>`).join('');
+        }
+        function gmkExpiryText(card, state) {
+            const mode = gmkExpiryMode(card);
+            if (mode === 'forever') return '永久有效';
+            if (mode === 'date') return `${card.expire_date} 到期${card.expire_date < gmkToday() ? ' · 已过期' : card.expire_date === gmkToday() ? ' · 今天到期' : ''}`;
+            const days = gmkSettingsLoaded ? Number(document.getElementById('gmk-expire-days').value) : state.expireDays || 0;
+            if (!days) return '跟随群默认 · 永久';
+            if (!Number.isFinite(card.add_time)) return `跟随群默认 · ${days}天`;
+            const expiry = new Date((card.add_time + days * 86400) * 1000);
+            return `跟随群默认 · ${days}天<br>${expiry.toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', hour12: false })} 到期${expiry.getTime() < Date.now() ? ' · 已过期' : ''}`;
+        }
+        function setGmkExpiry(qq, index, mode, date = gmkToday()) {
+            const state = gmkState(qq);
+            const card = state.cards.filter(item => !item.deleted)[index];
+            if (mode === 'date' && (!date || date < gmkToday())) { showMessage('请选择不早于北京时间今天的到期日。'); renderGmkDetail(qq); return; }
+            if (mode === 'default') delete card.expire_date;
+            else card.expire_date = mode === 'forever' ? null : date;
+            state.changed = true;
+            renderGmkDetail(qq);
         }
 
         function formatFileSize(bytes) {
@@ -1043,12 +1090,16 @@
 
         async function addGmkFiles(qq, files) {
             const state = gmkState(qq);
+            const mode = document.getElementById(`gmk-upload-mode-${qq}`).value;
+            const date = document.getElementById(`gmk-upload-date-${qq}`).value;
+            if (mode === 'date' && (!date || date < gmkToday())) { showMessage('请选择不早于北京时间今天的到期日。'); return; }
+            const expiry = mode === 'default' ? {} : { expire_date: mode === 'forever' ? null : date };
             for (const rawFile of Array.from(files)) {
                 if (!/^(image\/(jpeg|png|webp|gif)|video\/mp4)$/.test(rawFile.type)) continue;
                 const file = await compressGmkImage(rawFile);
                 const ext = file.name.split('.').pop().toLowerCase();
                 const name = `${qq}_${state.nextIndex++}.${ext}`;
-                state.cards.push({ file: name, add_time: Date.now() / 1000, kind: file.type === 'video/mp4' ? 'video' : (file.type === 'image/gif' ? 'gif' : 'image'), size_bytes: file.size, localFile: file, previewUrl: file.type === 'video/mp4' ? null : URL.createObjectURL(file) });
+                state.cards.push({ file: name, add_time: Date.now() / 1000, ...expiry, kind: file.type === 'video/mp4' ? 'video' : (file.type === 'image/gif' ? 'gif' : 'image'), size_bytes: file.size, localFile: file, previewUrl: file.type === 'video/mp4' ? null : URL.createObjectURL(file) });
             }
             state.changed = true; renderGmkObjects();
         }
@@ -1060,7 +1111,14 @@
             const changes = {};
             for (const [qq, state] of gmkStates) {
                 if (!state.changed) continue;
-                changes[qq] = state.cards.filter(card => !card.deleted).map(card => ({ file: card.file, add_time: card.add_time }));
+                changes[qq] = state.cards.filter(card => !card.deleted).map(card => {
+                    const item = { file: card.file, add_time: card.add_time };
+                    if (Object.hasOwn(card, 'expire_date')) {
+                        if (card.expire_date !== null && (!card.expire_date || (card.expire_date < gmkToday() && card.expire_date !== card.originalExpireDate))) throw new Error('冠名卡到期日不能早于北京时间今天。');
+                        item.expire_date = card.expire_date;
+                    }
+                    return item;
+                });
                 state.cards.filter(card => !card.deleted && card.localFile).forEach(card => formData.append('new_gmk_media', card.localFile, card.file));
             }
             formData.append('gmk_changes', JSON.stringify(changes));
