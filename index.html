@@ -268,7 +268,7 @@
                 <input type="text" id="verify-code-input" placeholder="请输入验证码..." maxlength="10"
                     class="w-full border-[3px] border-black p-3 text-center text-2xl font-black tracking-widest outline-none focus:bg-[#e6f4e8] transition-colors uppercase">
             </div>
-            <button onclick="submitVerifyCode()"
+            <button id="verify-submit" type="button" onclick="submitVerifyCode()"
                 class="w-full border-[3px] border-black bg-[#e6f4e8] p-3 font-bold hover:bg-[#b5e0bb] transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-y-1 active:translate-x-1 text-lg">
                 校验并进入系统
             </button>
@@ -680,11 +680,20 @@
         }
 
         // 💡 修改：静默调用后端，携带验证码安全请求配置数据
+        let loadingConfig = false;
         async function fetchServerData(verifyCode) {
+            if (loadingConfig || panelVerified) return;
             const groupId = document.getElementById('group-id-input').value.trim();
             if (!groupId) return;
 
-            showMessage('正在安全验证并从服务器加载现有配置，请稍候...');
+            loadingConfig = true;
+            const button = document.getElementById('verify-submit');
+            const input = document.getElementById('verify-code-input');
+            button.disabled = true;
+            input.disabled = true;
+            button.textContent = '正在加载配置，请稍候…';
+            button.setAttribute('aria-busy', 'true');
+            button.style.opacity = '0.6';
 
             try {
                 const response = await fetch(`${API_BASE_URL}/api/data/${groupId}`, {
@@ -721,7 +730,14 @@
                 showMessage('验证通过！成功同步该群现有配置。');
             } catch (error) {
                 console.error(error);
-                showMessage('同步加载失败，请检查服务器网络或隧道连接状态。');
+                showMessage('同步加载失败，请检查网络后重试，无需重新获取链接。');
+            } finally {
+                loadingConfig = false;
+                button.disabled = panelVerified;
+                input.disabled = panelVerified;
+                button.textContent = panelVerified ? '验证通过' : '校验并进入系统';
+                button.removeAttribute('aria-busy');
+                button.style.opacity = panelVerified ? '0.6' : '';
             }
         }
 
@@ -1211,11 +1227,15 @@
             return arr;
         }
 
+        let savingConfig = false;
         async function submitData() {
+            if (savingConfig) return;
+            if (!panelVerified) { showMessage("请先完成身份验证，再保存配置。"); return; }
             const groupId = document.getElementById('group-id-input').value.trim();
             if (!groupId) { showMessage('无法读取到有效的目标群号！'); return; }
 
-            showMessage('正在安全打包并加密上传数据到服务器，请稍候...');
+            savingConfig = true;
+            showMessage('正在上传并保存配置，请稍候，请勿重复提交...');
 
             const formData = new FormData();
             formData.append('group_id', groupId);
@@ -1393,13 +1413,16 @@
                     throw new Error(payload.detail || `服务器响应错误: ${response.status}`);
                 }
 
+                panelVerified = false;
                 initialFilePaths = new Set(usedFilePaths);
                 const deleteMsg = filesToDelete.length > 0 ? ` 并清理了 ${filesToDelete.length} 张废弃图片。` : "。";
-                showMessage(`保存成功！\n数据已同步到服务器${deleteMsg}\n\n👉 提示：短句等群配置需在 QQ 群发送【重载数据】后生效；群设置会在下次贵宾欢迎或冠名卡处理时生效。`);
+                showMessage(`保存成功！\n数据已同步到服务器${deleteMsg}\n\n👉 群配置会在机器人下次处理本群消息时自动更新，无需发送“重载数据”；群设置会在下次贵宾欢迎或冠名卡处理时生效。`);
 
             } catch (err) {
                 console.error(err);
                 showMessage(`同步失败，请检查服务器网络连接：\n${err.message}`);
+            } finally {
+                savingConfig = false;
             }
         }
     </script>
