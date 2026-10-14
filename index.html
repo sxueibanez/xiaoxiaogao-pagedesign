@@ -1416,7 +1416,7 @@
                 panelVerified = false;
                 initialFilePaths = new Set(usedFilePaths);
                 const deleteMsg = filesToDelete.length > 0 ? ` 并清理了 ${filesToDelete.length} 张废弃图片。` : "。";
-                showMessage(`保存成功！\n数据已同步到服务器${deleteMsg}\n\n👉 群配置会在机器人下次处理本群消息时自动更新，无需发送“重载数据”；群设置会在下次贵宾欢迎或冠名卡处理时生效。`);
+                showMessage(`保存成功！\n数据已同步到服务器${deleteMsg}`);
 
             } catch (err) {
                 console.error(err);
